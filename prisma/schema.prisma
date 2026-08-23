@@ -1,0 +1,200 @@
+// Orbit Desk — Prisma schema (Postgres)
+// See "Orbit Desk - Master Build Spec.md" §5 for the field-level source of truth.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------- Auth (Auth.js / NextAuth v5 standard shape, extended with passwordHash) ----------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+
+  accounts  Account[]
+  sessions  Session[]
+  workspace Workspace?
+
+  createdAt DateTime @default(now())
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ---------- Workspace (data-isolation boundary; one per user for MVP) ----------
+
+model Workspace {
+  id        String   @id @default(cuid())
+  ownerId   String   @unique
+  name      String
+  currency  String   @default("USD")
+  timezone  String   @default("America/New_York")
+  logoUrl   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner     User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  clients   Client[]
+  projects  Project[]
+  timeline  TimelineEvent[]
+
+  @@map("workspaces")
+}
+
+// ---------- Clients (spec §5 — six fields, onboarding is user-set, never derived) ----------
+
+enum OnboardingStatus {
+  pending
+  onboarded
+  rejected
+}
+
+model Client {
+  id               String           @id @default(cuid())
+  workspaceId      String
+  companyName      String
+  primaryContact   String?
+  email            String?
+  phone            String?
+  onboardingStatus OnboardingStatus @default(pending)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  projects  Project[]
+
+  @@index([workspaceId])
+  @@map("clients")
+}
+
+// ---------- Projects (spec §5 — five-stage lifecycle + rejected side state) ----------
+
+enum ProjectStage {
+  pending
+  active
+  built
+  transferred
+  completed
+  rejected
+}
+
+enum RejectedBy {
+  you
+  client
+}
+
+model Project {
+  id             String       @id @default(cuid())
+  workspaceId    String
+  clientId       String
+  name           String
+  fixedPrice     Decimal      @default(0) @db.Decimal(12, 2)
+  stage          ProjectStage @default(pending)
+  startedAt      DateTime?
+  builtAt        DateTime?
+  transferredAt  DateTime?
+  rejectionReason String?
+  rejectedBy     RejectedBy?
+  archivedAt     DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  client        Client         @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  collaborators Collaborator[]
+  payments      Payment[]
+
+  @@index([workspaceId])
+  @@index([clientId])
+  @@map("projects")
+}
+
+model Collaborator {
+  id        String @id @default(cuid())
+  projectId String
+  name      String
+  role      String
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("collaborators")
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  projectId String
+  amount    Decimal  @db.Decimal(12, 2)
+  date      DateTime @default(now())
+  note      String?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("payments")
+}
+
+// ---------- Relationship log / activity timeline (spec §5 — append-only, mixes manual + auto) ----------
+
+enum TimelineEntityType {
+  project
+  client
+}
+
+model TimelineEvent {
+  id          String             @id @default(cuid())
+  workspaceId String
+  entityType  TimelineEntityType
+  entityId    String
+  what        String
+  auto        Boolean            @default(false)
+  actorName   String?
+  when        DateTime           @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, entityType, entityId])
+  @@map("timeline_events")
+}

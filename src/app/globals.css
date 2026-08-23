@@ -1,0 +1,648 @@
+@import "tailwindcss";
+
+/* ================================================================
+   Orbit Desk design tokens — ported verbatim from the settled
+   screens (Orbit Desk Screens.dc.html) and Master Build Spec §6.
+   ================================================================ */
+:root {
+  --od-bg: #131010;
+  --od-surface: #1c1817;
+  --od-panel: #221c19;
+  --od-drawer: #241d18;
+
+  --od-oak: #3d2e24;
+  --od-oak-lt: #5a4232;
+  --od-rustic: #8a5e3c;
+  --od-brass: #c39a6b;
+
+  --od-text: #f3ece2;
+  --od-muted: #a2968a;
+  --od-rule: rgba(243, 236, 226, 0.13);
+  --od-rule-2: rgba(243, 236, 226, 0.22);
+
+  --od-green: #7ba05b;
+  --od-yellow: #d4a53c;
+  --od-red: #c2553d;
+
+  --od-placeholder: #6d635b;
+  --od-th: #8d8278;
+  --od-neutral-pos: #93a58a;
+  --od-canvas: #0d0b0a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--od-bg);
+  color: var(--od-text);
+  font-family: var(--font-archivo), Archivo, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  font-weight: 800;
+  line-height: 1.14;
+  letter-spacing: -0.018em;
+  color: var(--od-text);
+}
+h2 {
+  font-size: 26px;
+}
+h3 {
+  font-size: 20px;
+}
+h4 {
+  font-size: 17px;
+}
+p {
+  margin: 0;
+}
+a {
+  color: var(--od-brass);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--od-text);
+}
+
+.od-num {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.od-muted {
+  color: var(--od-muted);
+}
+
+/* Focus ring — spec §9: 2px rustic outline, 2px offset, never a browser default */
+:focus-visible {
+  outline: 2px solid var(--od-rustic);
+  outline-offset: 2px;
+}
+
+/* ================================================================
+   Shell
+   ================================================================ */
+.od-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--od-bg);
+}
+
+.od-nav {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  padding: 0 30px;
+  height: 60px;
+  background: var(--od-surface);
+  border-bottom: 1px solid var(--od-rule-2);
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Tailwind's `hidden`/`md:flex` utilities live in the layered `utilities`
+   cascade layer, so they can never win against .od-nav's unlayered
+   `display: flex` above. This modifier re-implements the responsive
+   toggle at the same (unlayered) specificity so source order decides it. */
+.od-nav-app {
+  display: none;
+}
+@media (min-width: 768px) {
+  .od-nav-app {
+    display: flex;
+  }
+}
+
+.od-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+  color: var(--od-text);
+}
+.od-mark {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  object-fit: contain;
+}
+
+.od-nl {
+  font-size: 13.5px;
+  color: var(--od-muted);
+  text-decoration: none;
+}
+.od-nl-on {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--od-text);
+  padding-bottom: 2px;
+  border-bottom: 2px solid var(--od-rustic);
+}
+.od-nl-off {
+  font-size: 13.5px;
+  color: var(--od-placeholder);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: default;
+}
+.od-kbd {
+  font-size: 11.5px;
+  padding: 5px 9px;
+  border: 1px solid var(--od-rule);
+  color: var(--od-muted);
+  background: var(--od-bg);
+}
+
+/* ================================================================
+   Buttons
+   ================================================================ */
+.od-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 12.5px;
+  padding: 9px 14px;
+  border: 1px solid var(--od-rule-2);
+  background: transparent;
+  color: var(--od-text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.od-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.od-btn-p {
+  background: var(--od-rustic);
+  border-color: var(--od-rustic);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+.od-btn-p:hover:not(:disabled) {
+  background: #7a5033;
+}
+.od-btn-s {
+  background: var(--od-panel);
+}
+.od-btn-s:hover:not(:disabled) {
+  background: var(--od-oak-lt);
+}
+.od-btn-g {
+  border-color: transparent;
+  color: var(--od-brass);
+  padding: 9px 4px;
+}
+.od-btn-danger {
+  color: var(--od-red);
+  background: transparent;
+  border-color: transparent;
+  padding: 9px 4px;
+}
+
+/* ================================================================
+   Body / page padding
+   ================================================================ */
+.od-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.od-pad {
+  padding: 26px 30px;
+}
+
+/* ================================================================
+   Label plate — the drawer label, used for every group/section heading
+   ================================================================ */
+.od-plate {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 11px;
+  background: var(--od-oak);
+  border: 1px solid var(--od-rule-2);
+  font: 800 10px/1 var(--font-archivo), Archivo, sans-serif;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--od-brass);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09);
+}
+.od-kick {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--od-muted);
+}
+
+.od-rule {
+  height: 1px;
+  background: var(--od-rule-2);
+  border: 0;
+  margin: 0;
+}
+
+/* ================================================================
+   Drawer-front row — the signature list-row element
+   ================================================================ */
+.od-drawer {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 13px 16px;
+  background: linear-gradient(180deg, var(--od-drawer) 0%, #1e1814 100%);
+  border: 1px solid var(--od-rule);
+  border-top-color: rgba(255, 255, 255, 0.055);
+  margin-bottom: -1px;
+  text-align: left;
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+a.od-drawer,
+.od-drawer[data-static="true"] {
+  cursor: default;
+}
+.od-drawer:hover {
+  border-top-color: rgba(255, 255, 255, 0.14);
+}
+.od-drawer-flag {
+  background: linear-gradient(180deg, #2c2018 0%, #241a14 100%);
+  border-color: rgba(194, 85, 61, 0.4);
+}
+.od-drawer-closed {
+  background: linear-gradient(180deg, #1f1a17 0%, #1a1512 100%);
+}
+.od-drawer-closed .od-drawer-primary {
+  color: #cfc4b8;
+}
+.od-pull {
+  width: 22px;
+  height: 4px;
+  flex: none;
+  background: var(--od-brass);
+  opacity: 0.5;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+}
+.od-drawer-flag .od-pull {
+  background: var(--od-red);
+  opacity: 0.65;
+}
+.od-drawer-closed .od-pull {
+  opacity: 0.28;
+}
+
+.od-card {
+  background: var(--od-surface);
+  border: 1px solid var(--od-rule);
+}
+
+/* ================================================================
+   Status chip
+   ================================================================ */
+.od-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid var(--od-rule-2);
+  color: var(--od-muted);
+  white-space: nowrap;
+}
+.od-dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+}
+.od-t-active {
+  color: #a6c286;
+  border-color: rgba(123, 160, 91, 0.45);
+}
+.od-t-pending {
+  color: #e0bc63;
+  border-color: rgba(212, 165, 60, 0.45);
+}
+.od-t-rejected {
+  color: #d78872;
+  border-color: rgba(194, 85, 61, 0.45);
+}
+.od-t-done {
+  color: var(--od-neutral-pos);
+  border-color: var(--od-rule-2);
+}
+
+/* ================================================================
+   Tabs
+   ================================================================ */
+.od-tab {
+  font-size: 13px;
+  color: var(--od-muted);
+  padding: 0 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+}
+.od-tab-on {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--od-text);
+  padding: 0 0 10px;
+  border-bottom: 2px solid var(--od-rustic);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* ================================================================
+   Fields
+   ================================================================ */
+.od-input {
+  min-height: 38px;
+  padding: 9px 12px;
+  background: var(--od-panel);
+  border: 1px solid var(--od-rule-2);
+  color: var(--od-text);
+  font-size: 13.5px;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+.od-input:focus,
+.od-input:focus-within {
+  border-color: var(--od-rustic);
+}
+input.od-input::placeholder,
+textarea.od-input::placeholder {
+  color: var(--od-placeholder);
+}
+textarea.od-input {
+  min-height: 62px;
+  resize: vertical;
+  line-height: 1.5;
+}
+.od-input-dashed {
+  border-style: dashed;
+  border-color: var(--od-rule-2);
+  color: var(--od-placeholder);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+.od-lab {
+  font-size: 11.5px;
+  color: var(--od-muted);
+  margin-bottom: 6px;
+  display: block;
+}
+.od-th {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--od-th);
+}
+.od-sq {
+  width: 9px;
+  height: 9px;
+  flex: none;
+}
+
+/* Three-way segmented control (onboarding status) */
+.od-seg {
+  display: flex;
+  border: 1px solid var(--od-rule-2);
+}
+.od-seg label:not(:first-child) {
+  border-left: 1px solid var(--od-rule-2);
+}
+.od-seg-radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.od-seg-opt {
+  display: block;
+  text-align: center;
+  padding: 9px 0;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--od-muted);
+  cursor: pointer;
+}
+.od-seg-radio:checked + .od-seg-opt {
+  background: var(--od-oak);
+  color: var(--od-text);
+}
+.od-seg-radio:focus-visible + .od-seg-opt {
+  outline: 2px solid var(--od-rustic);
+  outline-offset: -2px;
+}
+
+/* ================================================================
+   Mobile tab bar
+   ================================================================ */
+.od-mob-tab {
+  flex: 1;
+  padding: 15px 10px;
+  font-weight: 800;
+  font-size: 11.5px;
+  color: var(--od-muted);
+  text-align: left;
+  border-right: 1px solid var(--od-rule);
+  background: none;
+  border-top: none;
+  border-bottom: none;
+  border-left: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+.od-mob-tab:last-child {
+  border-right: none;
+}
+.od-mob-tab-on {
+  flex: 1;
+  padding: 15px 10px;
+  font-weight: 800;
+  font-size: 11.5px;
+  color: var(--od-text);
+  text-align: left;
+  border-right: 1px solid var(--od-rule);
+  box-shadow: inset 0 2px 0 var(--od-rustic);
+  background: none;
+  border-top: none;
+  border-bottom: none;
+  border-left: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+.od-mob-tab-on:last-child {
+  border-right: none;
+}
+
+/* ================================================================
+   Modal
+   ================================================================ */
+.od-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 6, 6, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 20px;
+}
+.od-modal {
+  background: var(--od-surface);
+  border: 1px solid var(--od-rule-2);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
+  width: 100%;
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+}
+.od-modal-sm {
+  max-width: 472px;
+}
+.od-modal-md {
+  max-width: 540px;
+}
+.od-cmdk-overlay {
+  align-items: flex-start !important;
+  padding-top: 12vh !important;
+}
+.od-modal-head {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--od-rule);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex: none;
+}
+.od-modal-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+.od-modal-foot {
+  padding: 14px 24px;
+  border-top: 1px solid var(--od-rule);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--od-panel);
+  flex: none;
+  gap: 12px;
+}
+.od-modal-close {
+  font-size: 16px;
+  color: var(--od-placeholder);
+  background: none;
+  border: none;
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px;
+}
+.od-modal-close:hover {
+  color: var(--od-text);
+}
+
+/* ================================================================
+   Warning surface — 10% status colour over dark ground, 35% border
+   ================================================================ */
+.od-warn {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 13px 15px;
+  background: rgba(212, 165, 60, 0.1);
+  border: 1px solid rgba(212, 165, 60, 0.35);
+}
+.od-warn-ok {
+  background: rgba(123, 160, 91, 0.12);
+  border: 1px solid rgba(123, 160, 91, 0.35);
+}
+
+/* ================================================================
+   Stage ladder
+   ================================================================ */
+.od-ladder {
+  display: flex;
+  align-items: center;
+}
+.od-ladder-step {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  flex: 1;
+}
+.od-ladder-rule {
+  height: 1px;
+  flex: 1;
+  margin-bottom: 19px;
+}
+
+/* ================================================================
+   Scrollbar (subtle, matches the dark surface)
+   ================================================================ */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--od-oak);
+  border: 2px solid var(--od-bg);
+}
