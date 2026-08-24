@@ -3,6 +3,7 @@
 import { useRouter, usePathname } from "next/navigation";
 import { QueryModal } from "@/components/ui/QueryModal";
 import { ModalHeader } from "@/components/ui/Modal";
+import { SubmitButton } from "@/components/loading/SubmitButton";
 import { addCollaboratorAction } from "@/lib/actions/projects";
 
 export function CollaboratorModal({
@@ -46,7 +47,7 @@ function CollaboratorForm({
         <div className="od-modal-foot" style={{ margin: "0 -24px -20px", justifyContent: "flex-end" }}>
           <div className="flex gap-[9px]">
             <button type="button" onClick={close} className="od-btn od-btn-s">Cancel</button>
-            <button type="submit" className="od-btn od-btn-p">Add collaborator</button>
+            <SubmitButton className="od-btn od-btn-p">Add collaborator</SubmitButton>
           </div>
         </div>
       </form>

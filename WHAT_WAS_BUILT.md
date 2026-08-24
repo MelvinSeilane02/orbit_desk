@@ -34,16 +34,17 @@ settled Master Build Spec and screens won on UI, copy, and field names.
 - **`?view=by-client` and `?view=last-contact` are states of the list
   page, not separate routes** — matches the spec's explicit framing of
   those as view toggles.
-- **One DB-level trigger** (`fn_projects_guard_completion`, in
-  `prisma/migrations/20260822141500_completion_requires_transfer/`)
-  blocks setting a project's stage to `completed` unless it was already
-  `transferred`. Everything else (attention rules, derived totals) is
-  computed in application code, not stored — this was the one rule the
-  spec called out as "enforced by business logic, not just UI," so it's
-  enforced at the database level too, not just in the server actions.
-- **Client onboarding status is a user-set 3-way toggle**
-  (`pending` / `onboarded` / `rejected`), never auto-derived — the spec is
-  explicit that this must never be a dropdown or inferred.
+- **Two DB-level triggers.** `fn_projects_guard_completion` (in
+  `prisma/migrations/20260822141500_completion_requires_transfer/`) blocks
+  setting a project's stage to `completed` unless it was already
+  `transferred`. `fn_clients_set_onboarding` (added later — see "Client
+  onboarding" below) auto-derives a client's onboarding status. Everything
+  else (attention rules, derived totals) is computed in application code,
+  not stored.
+- **Client onboarding status is auto-derived, not a manual toggle** —
+  see the dedicated section below. (Superseded: it originally shipped as a
+  user-set 3-way toggle per the Master Build Spec; that decision was later
+  deliberately overridden.)
 - **Financial totals (paid, outstanding, booked) and attention flags are
   computed on read**, not stored, in `src/lib/data.ts` and
   `src/lib/attention.ts`. The four attention rules (built ≥14 days without
@@ -57,7 +58,7 @@ settled Master Build Spec and screens won on UI, copy, and field names.
 
 ```bash
 npx prisma dev --detach        # local Postgres-compatible dev DB, no Docker needed
-npx prisma migrate deploy      # apply migrations, including the completion-guard trigger
+npx prisma migrate deploy      # apply migrations, including the completion-guard and onboarding triggers
 npx prisma db seed             # seeds "Reed Interactive" workspace + sample data
 npm run dev
 ```
@@ -213,6 +214,71 @@ IndexedDB, unlike the sessionStorage-scoped sign-in state) — zero console
 errors throughout. `tsc --noEmit` and both flag-on/flag-off `next build`
 runs clean.
 
+## Client onboarding: auto-derived, not a manual toggle (both modes)
+
+Client onboarding status was originally a manual 3-way toggle
+(`pending`/`onboarded`/`rejected`), per the Master Build Spec ("a
+three-way segmented control, never a dropdown"). It's now **auto-derived**
+from contact completeness, per section 7a of `orbit-desk-master-build-prompt.md`
+— a deliberate, later override of that original decision, not a bug fix.
+
+Both source spec documents were verified directly before making this
+change (they live outside this repo). They genuinely disagreed: the Master
+Build Spec called for a manual toggle; §7a called for an auto-derived
+`onboardingComplete` boolean, recalculated on every write, with `rejected`
+exempt. The original build correctly followed this project's own
+documented tie-break rule ("Master Build Spec wins on field names") — this
+was a knowing, later decision to override that precedent for this one
+field specifically, made after confirming both documents said what each
+side of the request claimed.
+
+- **`Client.primaryContact` (one string) split into
+  `primaryContactFirstName`/`primaryContactSurname`** — matches §7a's
+  field-level wording. A client is "complete" once first name, surname,
+  and email are all present and non-blank.
+- **Online: `fn_clients_set_onboarding` trigger** (new migrations —
+  `prisma/migrations/20260823000000_client_onboarding_fields/` and
+  `.../20260823000001_client_onboarding_trigger/`, hand-written like the
+  existing completion-guard trigger since this project's local `prisma dev`
+  instance connects directly to `template1`, which breaks `prisma migrate
+  dev`'s shadow-database mechanism — every new shadow DB inherits
+  `template1`'s existing objects, causing false "already exists" errors;
+  worked around by hand-writing migrations and applying with `migrate
+  deploy`, which needs no shadow DB). `BEFORE INSERT OR UPDATE`, recomputes
+  `onboardingComplete` and — unless the row's current status is
+  `rejected` — `onboardingStatus`, every time.
+- **Offline: `computeOnboardingComplete()`** in
+  `src/lib/offline/writes/clients.ts` — the explicit reimplementation,
+  same pattern as `markCompleted()` reimplementing the completion-guard.
+  Also used by `src/lib/offline/seed.ts` so the offline demo data stays
+  self-consistent rather than trusting hardcoded status values.
+- **Rejection stays an explicit user action.** New `rejectClientAction`/
+  `restoreClientAction` (and offline equivalents) — plain one-click
+  buttons on the client detail page, no reason field (unlike project
+  rejection). The trigger/helper only ever auto-toggles pending↔onboarded;
+  a rejected client is never resurrected by editing it.
+- **`ClientForm`'s onboarding toggle removed**, replaced with a read-only
+  `StatusTag` badge showing whatever the DB/Dexie actually computed.
+- **Seed data**: three demo clients needed real data fixes, not just the
+  field split, since the trigger is unconditional on every insert —
+  Northgate Legal and Cobalt Fitness now have their surname genuinely
+  omitted (a believable "mid-onboarding" state) so they still land on
+  `pending`; Aldgate Prints had no email at all in the original seed (a
+  latent bug this migration exposed — it would've been forced to `pending`
+  despite having a completed, archived project attached), fixed by adding
+  one.
+
+Verified with a scripted Playwright pass in **both** modes: all three
+required cases — filling in a missing field flips pending→onboarded with
+a logged timeline event; clearing a field flips an onboarded client back
+to pending; rejecting a fully-complete client and re-saving it keeps it
+rejected (confirms the guard), then restoring it immediately recomputes to
+onboarded — all passed with zero console errors. Also caught and fixed: a
+stale dev-server Node module cache serving the pre-migration Prisma Client
+shape after `prisma generate` (a `PrismaClientKnownRequestError` for the
+dropped `primaryContact` column) — resolved with a dev server restart, not
+a code change.
+
 ## Sign-in page: password visibility toggle, Google button hidden
 
 - **`PasswordInput`** (`src/components/auth/PasswordInput.tsx`) — a
@@ -230,6 +296,147 @@ runs clean.
 
 Verified with `tsc --noEmit` (clean); not re-verified in a live browser
 this pass since the dev server wasn't reachable at the time.
+
+## Loading animation system — Phase 1 (Oak Grain Sweep + Document Stack Alignment)
+
+Replaces "please wait" loading UI with the drawer/filing-cabinet motion
+language from a dedicated build prompt (five animations total; this pass
+ships the first two, per that prompt's own build order). No spinners,
+no progress bars — a thin oak-grain sweep for small async ops and page
+transitions, offset document cards settling into a stack for
+project/client data loading.
+
+- **Foundation** (`src/app/globals.css`): three new tokens on `:root`
+  (`--od-dur`, `--od-dur-fast`, `--od-ease`), a new unlayered
+  `.od-loading-*` section with `@keyframes` for grain drift, a travelling
+  highlight sweep, and card settling (rotation clamped to 1–2deg), and
+  the first `prefers-reduced-motion` handling anywhere in the app — every
+  new animation collapses to a plain opacity fade under it, no
+  translate/rotate. Stays unlayered like the rest of the file (see the
+  `.od-nav-app` cascade-layer note above); confirmed via computed-style
+  inspection in a live browser, not just a successful build, per that
+  same lesson.
+- **`src/lib/loading/useDelayedPending.ts`**: the show-delay/min-duration
+  hook every loader is driven through — a pending state has to hold for
+  ~180ms before anything renders, and once shown it stays at least
+  ~400ms even if the data resolves early. This is what makes the
+  animations safe to wire into offline mode's near-instant Dexie reads
+  without ever flashing.
+- **`src/components/loading/`**: `OakGrainSweep` (`variant="block"` for a
+  content container, `"inline"` for inside a button),
+  `DocumentStackAlignment`, and `SubmitButton` — a drop-in replacement
+  for a bare `<button type="submit">` that uses `useFormStatus` +
+  `useDelayedPending` to swap its label for the inline sweep while
+  pending. Works identically for online server actions and offline
+  write functions bound via `action={(fd) => fn(...)}`.
+- **Wired into the real gaps**, all previously silent: the add-note,
+  remove-collaborator, start-work/mark-completed/archive, and
+  reject/restore buttons on both project and client detail pages (online
+  and offline), `CollaboratorModal`, the workspace-setup "Skip for now"
+  button, and the online sign-out button — all now `SubmitButton`. The
+  offline `AccountMenu` workspace switch (a plain `onClick`, not a form)
+  now runs through `useTransition` with the same inline sweep.
+- **New `loading.tsx` route boundaries**: `DocumentStackAlignment` for
+  `/projects/[id]` and `/clients/[id]`, `OakGrainSweep` for `/projects`,
+  `/clients`, and `/archive` — render inside `AppShell`'s content area,
+  so nav chrome stays put during the transition. The offline detail
+  pages' `if (detail === undefined) return null` blank-screen window
+  (visible after creating a project/client or switching workspace) now
+  shows `DocumentStackAlignment` through the same delayed-pending gate
+  instead.
+- **Deliberately not touched this pass**: Filing Cabinet Organisation,
+  Wooden Drawer Reveal, Drawer Index Tabs, `WorkspaceProvider`'s
+  first-load blank screens, `/overview`, and the ⌘K command palette's
+  loading state — all explicitly deferred by the source build prompt's
+  own build order and open questions.
+
+Caught one real bug during verification: a code comment mentioning
+`animate-*/transition-*` contained a literal `*/`, prematurely closing
+the CSS comment and corrupting the rules that followed — Lightning CSS
+flagged it as a build warning ("Unexpected token Delim('*')"), fixed by
+rewording the comment. Verified with `tsc --noEmit` (clean), `next build`
+in both `NEXT_PUBLIC_OFFLINE_MODE` states (clean), and a live Playwright
+pass in offline mode: zero console errors across sign-up, navigation,
+note submission, reject/restore, and the account-menu workspace switch;
+computed-style checks confirmed the new keyframes actually apply (not
+silently overridden) and that `prefers-reduced-motion` correctly
+collapses every animation to an opacity-only fade.
+
+## Offline backup & restore — Phase 1 (Export + Full Replace)
+
+Workspace-scoped backup/restore for offline mode, from a spec that
+required a pre-implementation audit against the real Dexie schema (it had
+been reconstructed from this document, not the code). The audit corrected
+several of the spec's assumptions: there is no `projectClients` junction
+table (client↔project is one-to-many via `ProjectRow.clientId`), the
+`collaborators` table wasn't accounted for in the spec's scope at all
+despite holding real per-project data, and client onboarding was already
+the auto-derived version (built earlier this session) rather than the
+manual-toggle bug the spec worried about. Full spec covers Export, Full
+Replace, Merge (tiered conflict resolution), and Checkpoint restore; this
+pass ships **Export + Full Replace only** — the user's explicit choice,
+given the size of the full spec — with Merge and Checkpoint deferred.
+
+- **`src/lib/offline/backup/types.ts`**: Zod schemas for the backup file
+  shape, mirroring `db.ts`'s row types independently (so a backup file's
+  shape is validated on its own terms, not just cast to whatever the live
+  schema currently looks like).
+- **`src/lib/offline/backup/export.ts`**: `exportWorkspaceBackup()` scopes
+  `clients`/`projects`/`timelineEvents` by `workspaceId` directly, and
+  `collaborators`/`payments` (which carry no `workspaceId` of their own)
+  by joining through the workspace's project ids — same pattern
+  `reads.ts`'s `paidTotalsByProject` already uses. Money stays raw integer
+  cents. Workspace metadata exported is `{ name, currency, timezone,
+  logoUrl }` only — no `id`/`ownerId`, so a restored/imported backup can
+  never carry local-identity information across devices.
+- **`src/lib/offline/backup/restore.ts`**: `parseBackupFile()` does
+  schema-version/shape validation (Zod) then an internal referential
+  check (every `clientId`/`projectId` a record points at must exist
+  within the backup's own data) and rejects the whole file on any
+  failure. `restoreWorkspaceBackup()` runs Full Replace inside one Dexie
+  transaction: the target workspace's *metadata* is updated in place
+  (never deleted — it's the container being restored into, not a scoped
+  table), its current clients/projects/collaborators/payments/
+  timelineEvents are deleted, then the backup's records are bulk-put back
+  with only `workspaceId` rewritten. Ids are kept exactly as they appear
+  in the backup (`crypto.randomUUID()` makes cross-device collisions
+  practically impossible), so referential integrity between
+  clients/projects/collaborators/payments carries over automatically with
+  no separate id-remapping pass. Every restored client's
+  `onboardingComplete`/`onboardingStatus` is recomputed via the existing
+  `computeOnboardingComplete()` (from `writes/clients.ts`) as the final
+  step — never taken verbatim from the file, `rejected` still exempted
+  (the helper already handles that internally).
+- **`src/lib/offline/backup/file.ts`**: File System Access API
+  (`showSaveFilePicker`/`showOpenFilePicker`) with a Blob +
+  `<a download>` / `<input type=file>` fallback for browsers that don't
+  support it (Firefox/Safari, and this is also the path automated
+  verification exercises — headless Chromium auto-resolves the picker
+  APIs to an unobservable location). No persistent folder-handle caching
+  yet — every backup/restore re-prompts.
+- **`src/components/backup/BackupModal.tsx`** / **`RestoreModal.tsx`**:
+  `QueryModal`-based, matching `CollaboratorModal`'s existing shape.
+  Restore has a pick → preview (record counts, export date, an explicit
+  red warning that this replaces everything) → confirm → progress
+  (reusing `OakGrainSweep` from the loading-animation system, not a
+  spinner) → done flow. Entry points are two new links in
+  `AccountMenu.tsx`'s offline dropdown, next to the workspace switcher —
+  there's no settings page anywhere in the app, so this was the only
+  sensible existing surface.
+
+**Deliberately not built this pass**: Merge mode's tiered conflict
+resolution, Checkpoint restore and its `backupCheckpoints` cursor table,
+and persistent folder-handle caching. Online/Postgres mode is untouched,
+matching the multi-workspace feature's precedent.
+
+Verified with `tsc --noEmit` (clean), `next build` in both
+`NEXT_PUBLIC_OFFLINE_MODE` states (clean — one online-mode build as
+regression insurance even though no online files changed), and a live
+Playwright round-trip: sign up → backup a seeded demo workspace (12
+clients, 15 projects, 11 payments, 50 timeline events) → create a second,
+empty workspace → restore the backup into it → confirm all 12 clients
+land correctly with onboarding recomputed and zero console errors
+throughout.
 
 ## Known limitations / deferred
 

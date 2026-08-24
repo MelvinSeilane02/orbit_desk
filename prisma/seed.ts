@@ -38,17 +38,22 @@ async function main() {
 
   async function makeClient(data: {
     companyName: string;
-    primaryContact?: string;
+    primaryContactFirstName?: string;
+    primaryContactSurname?: string;
     email?: string;
     phone?: string;
     onboardingStatus?: "pending" | "onboarded" | "rejected";
     createdDaysAgo?: number;
   }) {
+    // onboardingStatus above is advisory except for "rejected" — the
+    // fn_clients_set_onboarding trigger recomputes pending/onboarded from
+    // contact completeness on every insert regardless of what's passed here.
     const client = await prisma.client.create({
       data: {
         workspaceId: workspace.id,
         companyName: data.companyName,
-        primaryContact: data.primaryContact,
+        primaryContactFirstName: data.primaryContactFirstName,
+        primaryContactSurname: data.primaryContactSurname,
         email: data.email,
         phone: data.phone,
         onboardingStatus: data.onboardingStatus ?? "onboarded",
@@ -148,7 +153,8 @@ async function main() {
   // ---- Clients ----
   const arbor = await makeClient({
     companyName: "Arbor Health",
-    primaryContact: "Priya Raman",
+    primaryContactFirstName: "Priya",
+    primaryContactSurname: "Raman",
     email: "priya@arborhealth.co",
     phone: "+1 412 555 0148",
     onboardingStatus: "onboarded",
@@ -156,63 +162,74 @@ async function main() {
   });
   const kestrel = await makeClient({
     companyName: "Kestrel Coffee",
-    primaryContact: "Tom Delaney",
+    primaryContactFirstName: "Tom",
+    primaryContactSurname: "Delaney",
     email: "tom@kestrel.coffee",
     onboardingStatus: "onboarded",
     createdDaysAgo: 260,
   });
+  // Surname deliberately omitted: has an email but not a full name yet, a
+  // believable "mid-onboarding" state that correctly lands on `pending`
+  // once fn_clients_set_onboarding recomputes it.
   const northgate = await makeClient({
     companyName: "Northgate Legal",
-    primaryContact: "Susan Whitby",
+    primaryContactFirstName: "Susan",
     email: "s.whitby@northgate.legal",
     onboardingStatus: "pending",
     createdDaysAgo: 12,
   });
   const fable = await makeClient({
     companyName: "Studio Fable",
-    primaryContact: "Ines Marchetti",
+    primaryContactFirstName: "Ines",
+    primaryContactSurname: "Marchetti",
     email: "ines@studiofable.it",
     onboardingStatus: "onboarded",
     createdDaysAgo: 400,
   });
   const halden = await makeClient({
     companyName: "Halden Logistics",
-    primaryContact: "Erik Sandvik",
+    primaryContactFirstName: "Erik",
+    primaryContactSurname: "Sandvik",
     email: "erik@haldenlog.no",
     onboardingStatus: "onboarded",
     createdDaysAgo: 90,
   });
   const brightLane = await makeClient({
     companyName: "Bright Lane Dental",
-    primaryContact: "Dr. A. Osei",
+    primaryContactFirstName: "Dr. A.",
+    primaryContactSurname: "Osei",
     email: "admin@brightlane.dental",
     onboardingStatus: "onboarded",
     createdDaysAgo: 500,
   });
   const tidewater = await makeClient({
     companyName: "Tidewater Kayaks",
-    primaryContact: "Jo Pike",
+    primaryContactFirstName: "Jo",
+    primaryContactSurname: "Pike",
     email: "jo@tidewaterkayaks.com",
     onboardingStatus: "onboarded",
     createdDaysAgo: 150,
   });
+  // Surname omitted for the same "mid-onboarding" reason as Northgate Legal.
   const cobalt = await makeClient({
     companyName: "Cobalt Fitness",
-    primaryContact: "Ray Nunez",
+    primaryContactFirstName: "Ray",
     email: "ray@cobaltfitness.gym",
     onboardingStatus: "pending",
     createdDaysAgo: 5,
   });
   const verity = await makeClient({
     companyName: "Verity Books",
-    primaryContact: "Fran Adeyemi",
+    primaryContactFirstName: "Fran",
+    primaryContactSurname: "Adeyemi",
     email: "fran@veritybooks.co",
     onboardingStatus: "onboarded",
     createdDaysAgo: 600,
   });
   const marrow = await makeClient({
     companyName: "Marrow & Sons",
-    primaryContact: "Deborah Marrow",
+    primaryContactFirstName: "Deborah",
+    primaryContactSurname: "Marrow",
     email: "deborah@marrowandsons.com",
     onboardingStatus: "rejected",
     createdDaysAgo: 45,
@@ -355,7 +372,8 @@ async function main() {
   // A couple more archived/rejected rows so the Archive screen has real variety.
   const pikeRowe = await makeClient({
     companyName: "Pike & Rowe",
-    primaryContact: "Nadia Pike",
+    primaryContactFirstName: "Nadia",
+    primaryContactSurname: "Pike",
     onboardingStatus: "rejected",
     createdDaysAgo: 200,
   });
@@ -370,9 +388,14 @@ async function main() {
     rejectedBy: "client",
   });
 
+  // Email added (was missing entirely before this migration, which would
+  // otherwise force this to `pending` on insert despite the completed
+  // project attached below — see WHAT_WAS_BUILT.md).
   const aldgate = await makeClient({
     companyName: "Aldgate Prints",
-    primaryContact: "Owen Clarke",
+    primaryContactFirstName: "Owen",
+    primaryContactSurname: "Clarke",
+    email: "owen@aldgateprints.co",
     onboardingStatus: "onboarded",
     createdDaysAgo: 400,
   });

@@ -3,10 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireWorkspace } from "@/lib/session";
 import { getClientDetail } from "@/lib/data";
-import { formatMoney, formatDateShort, formatRelative } from "@/lib/format";
+import { formatMoney, formatDateShort, formatRelative, formatContactName } from "@/lib/format";
 import { onboardingTone, stageTone, StatusTag } from "@/components/ui/StatusTag";
 import { EditClientModal } from "@/components/clients/ClientModals";
-import { addClientNoteAction } from "@/lib/actions/clients";
+import { SubmitButton } from "@/components/loading/SubmitButton";
+import { addClientNoteAction, rejectClientAction, restoreClientAction } from "@/lib/actions/clients";
 import { isOfflineMode } from "@/lib/offline/mode";
 import { OfflineClientDetailPage } from "./OfflineClientDetailPage";
 
@@ -69,6 +70,17 @@ export default async function ClientDetailPage({
           <Link href={`/projects?new=1&clientId=${client.id}`} className="od-btn od-btn-p">
             New project
           </Link>
+          {client.onboardingStatus === "rejected" ? (
+            <form action={restoreClientAction}>
+              <input type="hidden" name="clientId" value={client.id} />
+              <SubmitButton className="od-btn od-btn-s">Restore client</SubmitButton>
+            </form>
+          ) : (
+            <form action={rejectClientAction}>
+              <input type="hidden" name="clientId" value={client.id} />
+              <SubmitButton className="od-btn od-btn-danger">Reject client</SubmitButton>
+            </form>
+          )}
         </div>
       </div>
 
@@ -119,9 +131,7 @@ export default async function ClientDetailPage({
                 placeholder="Add a note about this client"
               />
               <div className="mt-2 flex justify-end">
-                <button type="submit" className="od-btn od-btn-s">
-                  Add note
-                </button>
+                <SubmitButton className="od-btn od-btn-s">Add note</SubmitButton>
               </div>
             </form>
             <div>
@@ -142,7 +152,7 @@ export default async function ClientDetailPage({
 
         <div className="flex w-full flex-none flex-col gap-[22px] p-[22px] md:w-[330px] md:p-6" style={{ borderTop: "1px solid var(--od-rule-2)", background: "var(--od-surface)" }}>
           <FactsBlock title="Contact">
-            <FactRow label="Primary contact" value={client.primaryContact || "—"} emphasize />
+            <FactRow label="Primary contact" value={formatContactName(client.primaryContactFirstName, client.primaryContactSurname) || "—"} emphasize />
             <FactRow label="Email" value={client.email || "—"} brass={Boolean(client.email)} />
             <FactRow label="Phone" value={client.phone || "—"} />
           </FactsBlock>
@@ -174,7 +184,8 @@ export default async function ClientDetailPage({
         client={{
           id: client.id,
           companyName: client.companyName,
-          primaryContact: client.primaryContact,
+          primaryContactFirstName: client.primaryContactFirstName,
+          primaryContactSurname: client.primaryContactSurname,
           email: client.email,
           phone: client.phone,
           onboardingStatus: client.onboardingStatus,

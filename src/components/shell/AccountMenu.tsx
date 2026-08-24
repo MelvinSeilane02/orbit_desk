@@ -1,25 +1,64 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { signOutAction } from "@/lib/actions/auth";
 import { isOfflineMode } from "@/lib/offline/mode";
 import { useOfflineWorkspace } from "@/lib/offline/WorkspaceProvider";
 import { switchWorkspace } from "@/lib/offline/writes/workspace";
+import { SubmitButton } from "@/components/loading/SubmitButton";
+import { OakGrainSweep } from "@/components/loading/OakGrainSweep";
+import { useDelayedPending } from "@/lib/loading/useDelayedPending";
 
 export function AccountMenu({ showArchiveLink = false }: { showArchiveLink?: boolean }) {
   if (isOfflineMode()) return <OfflineAccountMenu showArchiveLink={showArchiveLink} />;
   return <OnlineAccountMenu showArchiveLink={showArchiveLink} />;
 }
 
-function OnlineAccountMenu({ showArchiveLink }: { showArchiveLink: boolean }) {
+/** `<details>` has no built-in click-away-to-close behavior — closes it
+ * when a pointerdown lands outside the element while it's open. */
+function useCloseOnClickAway(ref: React.RefObject<HTMLDetailsElement | null>) {
+  useEffect(() => {
+    function onPointerDown(e: PointerEvent) {
+      const el = ref.current;
+      if (el?.open && !el.contains(e.target as Node)) el.open = false;
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [ref]);
+}
+
+function MenuChevron() {
   return (
-    <details className="relative">
+    <svg width="9" height="9" viewBox="0 0 9 9" className="od-acct-chevron" style={{ pointerEvents: "none" }} aria-hidden="true">
+      <path d="M1 3L4.5 6.5L8 3" stroke="var(--od-text)" strokeWidth="1.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function OnlineAccountMenu({ showArchiveLink }: { showArchiveLink: boolean }) {
+  const ref = useRef<HTMLDetailsElement>(null);
+  useCloseOnClickAway(ref);
+
+  return (
+    <details ref={ref} className="relative">
       <summary
         className="list-none"
-        style={{ width: 30, height: 30, background: "var(--od-oak)", cursor: "pointer", boxShadow: "inset 0 1px 0 rgba(255,255,255,.1)" }}
+        style={{
+          width: 30,
+          height: 30,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "var(--od-oak)",
+          cursor: "pointer",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,.1)",
+        }}
         aria-label="Account menu"
-      />
+      >
+        <MenuChevron />
+      </summary>
       <div
         className="absolute right-0 z-20 mt-1 flex flex-col"
         style={{ background: "var(--od-surface)", border: "1px solid var(--od-rule-2)", minWidth: 170, boxShadow: "0 14px 40px rgba(0,0,0,.5)" }}
@@ -30,9 +69,9 @@ function OnlineAccountMenu({ showArchiveLink }: { showArchiveLink: boolean }) {
           </Link>
         )}
         <form action={signOutAction}>
-          <button type="submit" className="od-tab w-full text-left" style={{ padding: "10px 14px", color: "var(--od-red)" }}>
+          <SubmitButton className="od-tab w-full text-left" style={{ padding: "10px 14px", color: "var(--od-red)" }}>
             Sign out
-          </button>
+          </SubmitButton>
         </form>
       </div>
     </details>
@@ -49,25 +88,43 @@ function OfflineAccountMenu({ showArchiveLink }: { showArchiveLink: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const ref = useRef<HTMLDetailsElement>(null);
+  useCloseOnClickAway(ref);
+  const [switching, startSwitch] = useTransition();
+  const showSwitchingSweep = useDelayedPending(switching);
 
-  const newWorkspaceHref = (() => {
+  function queryHref(param: string, value: string) {
     const next = new URLSearchParams(searchParams.toString());
-    next.set("newWorkspace", "1");
+    next.set(param, value);
     return `${pathname}?${next.toString()}`;
-  })();
+  }
+  const newWorkspaceHref = queryHref("newWorkspace", "1");
 
-  async function onSwitch(workspaceId: string) {
-    await switchWorkspace(user.id, workspaceId);
-    router.push("/overview");
+  function onSwitch(workspaceId: string) {
+    startSwitch(async () => {
+      await switchWorkspace(user.id, workspaceId);
+      router.push("/overview");
+    });
   }
 
   return (
-    <details className="relative">
+    <details ref={ref} className="relative">
       <summary
         className="list-none"
-        style={{ width: 30, height: 30, background: "var(--od-oak)", cursor: "pointer", boxShadow: "inset 0 1px 0 rgba(255,255,255,.1)" }}
+        style={{
+          width: 30,
+          height: 30,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "var(--od-oak)",
+          cursor: "pointer",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,.1)",
+        }}
         aria-label="Account menu"
-      />
+      >
+        <MenuChevron />
+      </summary>
       <div
         className="absolute right-0 z-20 mt-1 flex flex-col"
         style={{ background: "var(--od-surface)", border: "1px solid var(--od-rule-2)", minWidth: 190, boxShadow: "0 14px 40px rgba(0,0,0,.5)" }}
@@ -89,19 +146,35 @@ function OfflineAccountMenu({ showArchiveLink }: { showArchiveLink: boolean }) {
               key={w.id}
               type="button"
               onClick={() => onSwitch(w.id)}
-              className="od-tab w-full text-left"
+              disabled={switching}
+              className="od-tab w-full text-left flex items-center gap-[8px]"
               style={{ padding: "8px 14px" }}
             >
               {w.name}
+              {showSwitchingSweep && <OakGrainSweep variant="inline" />}
             </button>
           )
         )}
         <Link
           href={newWorkspaceHref}
           className="od-tab"
-          style={{ padding: "8px 14px", borderBottom: "1px solid var(--od-rule)", color: "var(--od-brass)" }}
+          style={{ padding: "8px 14px", color: "var(--od-brass)" }}
         >
           + New workspace
+        </Link>
+        <Link
+          href={queryHref("backup", "1")}
+          className="od-tab"
+          style={{ padding: "8px 14px" }}
+        >
+          Backup workspace
+        </Link>
+        <Link
+          href={queryHref("restore", "1")}
+          className="od-tab"
+          style={{ padding: "8px 14px", borderBottom: "1px solid var(--od-rule)" }}
+        >
+          Restore workspace
         </Link>
 
         {showArchiveLink && (

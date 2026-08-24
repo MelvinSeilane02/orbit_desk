@@ -17,21 +17,31 @@ import {
   updateProject,
   recordPayment,
 } from "@/lib/offline/writes/projects";
-import { formatMoney, formatDateShort } from "@/lib/format";
+import { formatMoney, formatDateShort, formatContactName } from "@/lib/format";
 import { StageLadder } from "@/components/ui/StageLadder";
 import { StatusTag, stageTone } from "@/components/ui/StatusTag";
 import { PaymentModal } from "@/components/projects/PaymentModal";
 import { MarkBuiltModal, TransferModal, RejectModal } from "@/components/projects/LifecycleModals";
 import { CollaboratorModal } from "@/components/projects/CollaboratorModal";
 import { EditProjectModal } from "@/components/projects/ProjectModals";
+import { SubmitButton } from "@/components/loading/SubmitButton";
+import { DocumentStackAlignment } from "@/components/loading/DocumentStackAlignment";
+import { useDelayedPending } from "@/lib/loading/useDelayedPending";
 
 export function OfflineProjectDetailPage() {
   const params = useParams<{ id: string }>();
   const { workspace } = useOfflineWorkspace();
   const detail = useProjectDetail(workspace.id, params.id);
   const attention = useAttentionItems(workspace.id);
+  const showLoading = useDelayedPending(detail === undefined);
 
-  if (detail === undefined) return null;
+  if (detail === undefined) {
+    return showLoading ? (
+      <div className="flex min-h-0 flex-1 flex-col">
+        <DocumentStackAlignment />
+      </div>
+    ) : null;
+  }
   if (detail === null) notFound();
 
   const { project, timeline, paidTotal, outstanding } = detail;
@@ -101,7 +111,7 @@ export function OfflineProjectDetailPage() {
               <input type="hidden" name="projectId" value={project.id} />
               <textarea name="note" className="od-input od-input-dashed" placeholder="Write a note — stage changes and payments log themselves" />
               <div className="mt-2 flex justify-end">
-                <button type="submit" className="od-btn od-btn-s">Add note</button>
+                <SubmitButton className="od-btn od-btn-s">Add note</SubmitButton>
               </div>
             </form>
             <div>
@@ -161,7 +171,7 @@ export function OfflineProjectDetailPage() {
                   <form action={(fd) => removeCollaborator(workspace.id, fd)}>
                     <input type="hidden" name="projectId" value={project.id} />
                     <input type="hidden" name="collaboratorId" value={c.id} />
-                    <button type="submit" className="od-btn-g text-[11px]" style={{ padding: 2 }}>Remove</button>
+                    <SubmitButton className="od-btn-g text-[11px]" style={{ padding: 2 }}>Remove</SubmitButton>
                   </form>
                 </div>
               ))}
@@ -184,13 +194,13 @@ export function OfflineProjectDetailPage() {
               {project.stage === "transferred" && (
                 <form action={(fd) => markCompleted(workspace.id, fd)}>
                   <input type="hidden" name="projectId" value={project.id} />
-                  <button type="submit" className="od-btn od-btn-s w-full">Mark completed</button>
+                  <SubmitButton className="od-btn od-btn-s w-full">Mark completed</SubmitButton>
                 </form>
               )}
               {project.stage === "completed" && (
                 <form action={(fd) => archiveProject(workspace.id, fd)}>
                   <input type="hidden" name="projectId" value={project.id} />
-                  <button type="submit" className="od-btn od-btn-s w-full">Archive</button>
+                  <SubmitButton className="od-btn od-btn-s w-full">Archive</SubmitButton>
                 </form>
               )}
               <Link href="?reject=1" className="od-btn od-btn-danger">Reject project</Link>
@@ -219,7 +229,7 @@ export function OfflineProjectDetailPage() {
         projectId={project.id}
         projectName={project.name}
         clientName={project.client.companyName}
-        contactName={project.client.primaryContact}
+        contactName={formatContactName(project.client.primaryContactFirstName, project.client.primaryContactSurname)}
         outstanding={outstanding}
         currency={workspace.currency}
         action={(state, fd) => transferOwnership(workspace.id, state, fd)}
@@ -252,7 +262,7 @@ function ProjectPrimaryAction({
     return (
       <form action={(fd) => setActive(workspaceId, fd)}>
         <input type="hidden" name="projectId" value={projectId} />
-        <button type="submit" className="od-btn od-btn-p">Start work</button>
+        <SubmitButton className="od-btn od-btn-p">Start work</SubmitButton>
       </form>
     );
   }

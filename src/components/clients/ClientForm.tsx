@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect } from "react";
+import { onboardingTone, StatusTag } from "@/components/ui/StatusTag";
 
 /** Superset of lib/actions/clients' FormState — offline write functions add
  * `redirectTo` since there's no server-side redirect() to rely on. Online
@@ -10,18 +11,19 @@ type FormState = { error?: string; redirectTo?: string } | undefined;
 export type ClientDefaults = {
   id?: string;
   companyName?: string;
-  primaryContact?: string | null;
+  primaryContactFirstName?: string | null;
+  primaryContactSurname?: string | null;
   email?: string | null;
   phone?: string | null;
+  /** Read-only — auto-derived from contact completeness, never submitted by
+   * this form. See fn_clients_set_onboarding (online) / computeOnboardingComplete (offline). */
   onboardingStatus?: "pending" | "onboarded" | "rejected";
   createdAt?: Date | string | number;
 };
 
-const SEGMENTS: Array<{ value: "pending" | "onboarded" | "rejected"; label: string }> = [
-  { value: "pending", label: "Pending" },
-  { value: "onboarded", label: "Onboarded" },
-  { value: "rejected", label: "Rejected" },
-];
+function capitalize(s: string) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 export function ClientForm({
   action,
@@ -72,16 +74,29 @@ export function ClientForm({
           required
         />
       </div>
-      <div>
-        <label className="od-lab" htmlFor="primaryContact">
-          Primary contact
-        </label>
-        <input
-          id="primaryContact"
-          name="primaryContact"
-          className="od-input"
-          defaultValue={defaults?.primaryContact ?? ""}
-        />
+      <div className="flex gap-3">
+        <div className="flex-1">
+          <label className="od-lab" htmlFor="primaryContactFirstName">
+            First name
+          </label>
+          <input
+            id="primaryContactFirstName"
+            name="primaryContactFirstName"
+            className="od-input"
+            defaultValue={defaults?.primaryContactFirstName ?? ""}
+          />
+        </div>
+        <div className="flex-1">
+          <label className="od-lab" htmlFor="primaryContactSurname">
+            Surname
+          </label>
+          <input
+            id="primaryContactSurname"
+            name="primaryContactSurname"
+            className="od-input"
+            defaultValue={defaults?.primaryContactSurname ?? ""}
+          />
+        </div>
       </div>
       <div className="flex gap-3">
         <div className="flex-1">
@@ -113,7 +128,9 @@ export function ClientForm({
       {defaults?.id && (
         <div>
           <label className="od-lab">Onboarding status</label>
-          <ClientOnboardingSegments defaultValue={status} />
+          <div>
+            <StatusTag tone={onboardingTone(status)} label={capitalize(status)} />
+          </div>
         </div>
       )}
 
@@ -141,24 +158,5 @@ export function ClientForm({
         {pending ? "Saving…" : submitLabel}
       </button>
     </form>
-  );
-}
-
-function ClientOnboardingSegments({ defaultValue }: { defaultValue: string }) {
-  return (
-    <div className="od-seg">
-      {SEGMENTS.map((s) => (
-        <label key={s.value} style={{ flex: 1, margin: 0 }}>
-          <input
-            type="radio"
-            name="onboardingStatus"
-            value={s.value}
-            defaultChecked={defaultValue === s.value}
-            className="od-seg-radio"
-          />
-          <span className="od-seg-opt">{s.label}</span>
-        </label>
-      ))}
-    </div>
   );
 }

@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/offline/db";
 import { newId } from "@/lib/offline/ids";
 import { dollarsToCents } from "@/lib/offline/money";
+import { computeOnboardingComplete } from "@/lib/offline/writes/clients";
 import type { OnboardingStatus, ProjectStage, RejectedBy } from "@/lib/offline/db";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -14,7 +15,8 @@ export async function seedDemoData(workspaceId: string): Promise<void> {
 
   async function makeClient(data: {
     companyName: string;
-    primaryContact?: string;
+    primaryContactFirstName?: string;
+    primaryContactSurname?: string;
     email?: string;
     phone?: string;
     onboardingStatus?: OnboardingStatus;
@@ -22,14 +24,28 @@ export async function seedDemoData(workspaceId: string): Promise<void> {
   }) {
     const id = newId();
     const createdAt = daysAgo(data.createdDaysAgo ?? 200);
+    const primaryContactFirstName = data.primaryContactFirstName ?? null;
+    const primaryContactSurname = data.primaryContactSurname ?? null;
+    const email = data.email ?? null;
+    // Same derivation logic as the online fn_clients_set_onboarding
+    // trigger, so this seed stays self-consistent rather than trusting
+    // data.onboardingStatus directly (see WHAT_WAS_BUILT.md).
+    const { onboardingComplete, onboardingStatus } = computeOnboardingComplete({
+      primaryContactFirstName,
+      primaryContactSurname,
+      email,
+      onboardingStatus: data.onboardingStatus ?? "pending",
+    });
     await db.clients.add({
       id,
       workspaceId,
       companyName: data.companyName,
-      primaryContact: data.primaryContact ?? null,
-      email: data.email ?? null,
+      primaryContactFirstName,
+      primaryContactSurname,
+      email,
       phone: data.phone ?? null,
-      onboardingStatus: data.onboardingStatus ?? "onboarded",
+      onboardingComplete,
+      onboardingStatus,
       createdAt,
       updatedAt: createdAt,
     });
@@ -135,7 +151,8 @@ export async function seedDemoData(workspaceId: string): Promise<void> {
 
   const arbor = await makeClient({
     companyName: "Arbor Health",
-    primaryContact: "Priya Raman",
+    primaryContactFirstName: "Priya",
+    primaryContactSurname: "Raman",
     email: "priya@arborhealth.co",
     phone: "+1 412 555 0148",
     onboardingStatus: "onboarded",
@@ -143,63 +160,74 @@ export async function seedDemoData(workspaceId: string): Promise<void> {
   });
   const kestrel = await makeClient({
     companyName: "Kestrel Coffee",
-    primaryContact: "Tom Delaney",
+    primaryContactFirstName: "Tom",
+    primaryContactSurname: "Delaney",
     email: "tom@kestrel.coffee",
     onboardingStatus: "onboarded",
     createdDaysAgo: 260,
   });
+  // Surname deliberately omitted — "mid-onboarding" data lands on
+  // `pending` once computeOnboardingComplete recomputes it, matching the
+  // online seed's Northgate Legal.
   const northgate = await makeClient({
     companyName: "Northgate Legal",
-    primaryContact: "Susan Whitby",
+    primaryContactFirstName: "Susan",
     email: "s.whitby@northgate.legal",
     onboardingStatus: "pending",
     createdDaysAgo: 12,
   });
   const fable = await makeClient({
     companyName: "Studio Fable",
-    primaryContact: "Ines Marchetti",
+    primaryContactFirstName: "Ines",
+    primaryContactSurname: "Marchetti",
     email: "ines@studiofable.it",
     onboardingStatus: "onboarded",
     createdDaysAgo: 400,
   });
   const halden = await makeClient({
     companyName: "Halden Logistics",
-    primaryContact: "Erik Sandvik",
+    primaryContactFirstName: "Erik",
+    primaryContactSurname: "Sandvik",
     email: "erik@haldenlog.no",
     onboardingStatus: "onboarded",
     createdDaysAgo: 90,
   });
   const brightLane = await makeClient({
     companyName: "Bright Lane Dental",
-    primaryContact: "Dr. A. Osei",
+    primaryContactFirstName: "Dr. A.",
+    primaryContactSurname: "Osei",
     email: "admin@brightlane.dental",
     onboardingStatus: "onboarded",
     createdDaysAgo: 500,
   });
   const tidewater = await makeClient({
     companyName: "Tidewater Kayaks",
-    primaryContact: "Jo Pike",
+    primaryContactFirstName: "Jo",
+    primaryContactSurname: "Pike",
     email: "jo@tidewaterkayaks.com",
     onboardingStatus: "onboarded",
     createdDaysAgo: 150,
   });
+  // Surname omitted for the same reason as Northgate Legal.
   const cobalt = await makeClient({
     companyName: "Cobalt Fitness",
-    primaryContact: "Ray Nunez",
+    primaryContactFirstName: "Ray",
     email: "ray@cobaltfitness.gym",
     onboardingStatus: "pending",
     createdDaysAgo: 5,
   });
   const verity = await makeClient({
     companyName: "Verity Books",
-    primaryContact: "Fran Adeyemi",
+    primaryContactFirstName: "Fran",
+    primaryContactSurname: "Adeyemi",
     email: "fran@veritybooks.co",
     onboardingStatus: "onboarded",
     createdDaysAgo: 600,
   });
   const marrow = await makeClient({
     companyName: "Marrow & Sons",
-    primaryContact: "Deborah Marrow",
+    primaryContactFirstName: "Deborah",
+    primaryContactSurname: "Marrow",
     email: "deborah@marrowandsons.com",
     onboardingStatus: "rejected",
     createdDaysAgo: 45,
@@ -340,7 +368,8 @@ export async function seedDemoData(workspaceId: string): Promise<void> {
 
   const pikeRowe = await makeClient({
     companyName: "Pike & Rowe",
-    primaryContact: "Nadia Pike",
+    primaryContactFirstName: "Nadia",
+    primaryContactSurname: "Pike",
     onboardingStatus: "rejected",
     createdDaysAgo: 200,
   });
@@ -355,9 +384,12 @@ export async function seedDemoData(workspaceId: string): Promise<void> {
     rejectedBy: "client",
   });
 
+  // Email added — see the matching note in prisma/seed.ts.
   const aldgate = await makeClient({
     companyName: "Aldgate Prints",
-    primaryContact: "Owen Clarke",
+    primaryContactFirstName: "Owen",
+    primaryContactSurname: "Clarke",
+    email: "owen@aldgateprints.co",
     onboardingStatus: "onboarded",
     createdDaysAgo: 400,
   });

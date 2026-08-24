@@ -6,6 +6,8 @@ import { MobileHeader } from "@/components/shell/MobileHeader";
 import { MobileTabBar } from "@/components/shell/MobileTabBar";
 import { CommandPalette } from "@/components/shell/CommandPalette";
 import { NewWorkspaceModal } from "@/components/shell/NewWorkspaceModal";
+import { BackupModal } from "@/components/backup/BackupModal";
+import { RestoreModal } from "@/components/backup/RestoreModal";
 import { isOfflineMode } from "@/lib/offline/mode";
 import { WorkspaceProvider, useOfflineWorkspace } from "@/lib/offline/WorkspaceProvider";
 
@@ -65,6 +67,8 @@ function OfflineShellChrome({ children }: { children: React.ReactNode }) {
       <MobileTabBar />
       <CommandPalette open={searchOpen} onOpenChange={setSearchOpen} workspaceId={workspace.id} />
       <NewWorkspaceModal />
+      <BackupModal />
+      <RestoreModal />
     </div>
   );
 }

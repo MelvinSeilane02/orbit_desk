@@ -35,9 +35,13 @@ export interface ClientRow {
   id: string;
   workspaceId: string;
   companyName: string;
-  primaryContact: string | null;
+  primaryContactFirstName: string | null;
+  primaryContactSurname: string | null;
   email: string | null;
   phone: string | null;
+  /** Derived by computeOnboardingComplete() in writes/clients.ts, mirroring
+   * the online fn_clients_set_onboarding trigger — see WHAT_WAS_BUILT.md. */
+  onboardingComplete: boolean;
   onboardingStatus: OnboardingStatus;
   createdAt: number;
   updatedAt: number;

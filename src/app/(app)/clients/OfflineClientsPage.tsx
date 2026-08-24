@@ -5,7 +5,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useOfflineWorkspace } from "@/lib/offline/WorkspaceProvider";
 import { useClientsForList, daysAgo, type ClientListRow } from "@/lib/offline/reads";
 import { createClient } from "@/lib/offline/writes/clients";
-import { formatRelative } from "@/lib/format";
+import { formatRelative, formatContactName } from "@/lib/format";
 import { onboardingTone, StatusTag } from "@/components/ui/StatusTag";
 import { NewClientModal } from "@/components/clients/ClientModals";
 
@@ -41,7 +41,7 @@ export function OfflineClientsPage() {
     filtered = filtered.filter(
       (c) =>
         c.companyName.toLowerCase().includes(query) ||
-        (c.primaryContact ?? "").toLowerCase().includes(query)
+        formatContactName(c.primaryContactFirstName, c.primaryContactSurname).toLowerCase().includes(query)
     );
   }
 
@@ -184,7 +184,7 @@ function LastContactView({ clients }: { clients: ClientListRow[] }) {
                 <div className="flex min-w-0 flex-1 flex-col gap-[2px]">
                   <span className="font-extrabold text-[13.5px]">{c.companyName}</span>
                   <span className="od-muted text-[11.5px]">
-                    {c.primaryContact || "—"} · no contact in {daysAgo(c.lastContactAt)} days, {c.activeCount} active project{c.activeCount === 1 ? "" : "s"}
+                    {formatContactName(c.primaryContactFirstName, c.primaryContactSurname) || "—"} · no contact in {daysAgo(c.lastContactAt)} days, {c.activeCount} active project{c.activeCount === 1 ? "" : "s"}
                   </span>
                 </div>
                 <Link href={`/clients/${c.id}?note=1`} className="od-btn" style={{ flex: "none", fontSize: 11.5, padding: "7px 11px" }}>
@@ -206,7 +206,7 @@ function LastContactView({ clients }: { clients: ClientListRow[] }) {
               <span className="font-extrabold text-[13.5px]" style={{ flex: 1, minWidth: 0 }}>
                 {c.companyName}
               </span>
-              <span className="od-muted text-[12.5px]" style={{ width: 170 }}>{c.primaryContact || "—"}</span>
+              <span className="od-muted text-[12.5px]" style={{ width: 170 }}>{formatContactName(c.primaryContactFirstName, c.primaryContactSurname) || "—"}</span>
               <span className="od-muted text-[11.5px]" style={{ width: 180 }}>{formatRelative(c.lastContactAt)}</span>
               <span className="od-muted text-[11.5px]" style={{ width: 160 }}>{c.projectCount} project{c.projectCount === 1 ? "" : "s"}</span>
             </Link>
@@ -226,7 +226,7 @@ function ClientRow({ client: c }: { client: ClientListRow }) {
         <span className="font-extrabold text-[13.5px]">{c.companyName}</span>
       </div>
       <div className="hidden min-w-0 flex-col md:flex" style={{ flex: 1 }}>
-        <span className="text-[12.5px]">{c.primaryContact || "—"}</span>
+        <span className="text-[12.5px]">{formatContactName(c.primaryContactFirstName, c.primaryContactSurname) || "—"}</span>
         <span className="text-[10.5px]" style={{ color: "var(--od-placeholder)" }}>{c.email || ""}</span>
       </div>
       <span className="od-muted hidden text-[11.5px] md:inline" style={{ width: 160 }}>

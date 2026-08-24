@@ -2,6 +2,7 @@
 
 import { useActionState, useRef, useState } from "react";
 import { createWorkspaceAction, type FormState } from "@/lib/actions/workspace";
+import { SubmitButton } from "@/components/loading/SubmitButton";
 
 const CURRENCIES = [
   { code: "USD", label: "USD $ — US Dollar" },
@@ -125,9 +126,9 @@ export function WorkspaceSetupForm({
       )}
 
       <div className="flex items-center justify-between">
-        <button type="submit" formAction={skipAction} className="od-btn od-btn-g">
+        <SubmitButton formAction={skipAction} className="od-btn od-btn-g">
           Skip for now
-        </button>
+        </SubmitButton>
         <button type="submit" disabled={pending} className="od-btn od-btn-p">
           {pending ? "Saving…" : "Continue"}
         </button>

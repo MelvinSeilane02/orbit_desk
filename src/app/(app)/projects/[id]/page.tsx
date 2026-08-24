@@ -3,13 +3,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireWorkspace } from "@/lib/session";
 import { getProjectDetail, getAttentionItems } from "@/lib/data";
-import { formatMoney, formatDateShort } from "@/lib/format";
+import { formatMoney, formatDateShort, formatContactName } from "@/lib/format";
 import { StageLadder } from "@/components/ui/StageLadder";
 import { StatusTag, stageTone } from "@/components/ui/StatusTag";
 import { PaymentModal } from "@/components/projects/PaymentModal";
 import { MarkBuiltModal, TransferModal, RejectModal } from "@/components/projects/LifecycleModals";
 import { CollaboratorModal } from "@/components/projects/CollaboratorModal";
 import { EditProjectModal } from "@/components/projects/ProjectModals";
+import { SubmitButton } from "@/components/loading/SubmitButton";
 import { addProjectNoteAction, setActiveAction, markCompletedAction, removeCollaboratorAction, archiveProjectAction } from "@/lib/actions/projects";
 import { isOfflineMode } from "@/lib/offline/mode";
 import { OfflineProjectDetailPage } from "./OfflineProjectDetailPage";
@@ -98,7 +99,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               <input type="hidden" name="projectId" value={project.id} />
               <textarea name="note" className="od-input od-input-dashed" placeholder="Write a note — stage changes and payments log themselves" />
               <div className="mt-2 flex justify-end">
-                <button type="submit" className="od-btn od-btn-s">Add note</button>
+                <SubmitButton className="od-btn od-btn-s">Add note</SubmitButton>
               </div>
             </form>
             <div>
@@ -158,7 +159,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                   <form action={removeCollaboratorAction}>
                     <input type="hidden" name="projectId" value={project.id} />
                     <input type="hidden" name="collaboratorId" value={c.id} />
-                    <button type="submit" className="od-btn-g text-[11px]" style={{ padding: 2 }}>Remove</button>
+                    <SubmitButton className="od-btn-g text-[11px]" style={{ padding: 2 }}>Remove</SubmitButton>
                   </form>
                 </div>
               ))}
@@ -181,13 +182,13 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               {project.stage === "transferred" && (
                 <form action={markCompletedAction}>
                   <input type="hidden" name="projectId" value={project.id} />
-                  <button type="submit" className="od-btn od-btn-s w-full">Mark completed</button>
+                  <SubmitButton className="od-btn od-btn-s w-full">Mark completed</SubmitButton>
                 </form>
               )}
               {project.stage === "completed" && (
                 <form action={archiveProjectAction}>
                   <input type="hidden" name="projectId" value={project.id} />
-                  <button type="submit" className="od-btn od-btn-s w-full">Archive</button>
+                  <SubmitButton className="od-btn od-btn-s w-full">Archive</SubmitButton>
                 </form>
               )}
               <Link href="?reject=1" className="od-btn od-btn-danger">Reject project</Link>
@@ -210,7 +211,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         projectId={project.id}
         projectName={project.name}
         clientName={project.client.companyName}
-        contactName={project.client.primaryContact}
+        contactName={formatContactName(project.client.primaryContactFirstName, project.client.primaryContactSurname)}
         outstanding={outstanding}
         currency={workspace.currency}
       />
@@ -226,7 +227,7 @@ function PrimaryAction({ stage, projectId }: { stage: string; projectId: string 
     return (
       <form action={setActiveAction}>
         <input type="hidden" name="projectId" value={projectId} />
-        <button type="submit" className="od-btn od-btn-p">Start work</button>
+        <SubmitButton className="od-btn od-btn-p">Start work</SubmitButton>
       </form>
     );
   }

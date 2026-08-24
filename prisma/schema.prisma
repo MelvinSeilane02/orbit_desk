@@ -83,7 +83,9 @@ model Workspace {
   @@map("workspaces")
 }
 
-// ---------- Clients (spec §5 — six fields, onboarding is user-set, never derived) ----------
+// ---------- Clients (onboarding auto-derived from contact completeness —
+// orbit-desk-master-build-prompt.md §7a, overriding the original Master
+// Build Spec tie-break for this field; see fn_clients_set_onboarding trigger) ----------
 
 enum OnboardingStatus {
   pending
@@ -92,15 +94,17 @@ enum OnboardingStatus {
 }
 
 model Client {
-  id               String           @id @default(cuid())
-  workspaceId      String
-  companyName      String
-  primaryContact   String?
-  email            String?
-  phone            String?
-  onboardingStatus OnboardingStatus @default(pending)
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  id                      String           @id @default(cuid())
+  workspaceId             String
+  companyName             String
+  primaryContactFirstName String?
+  primaryContactSurname   String?
+  email                   String?
+  phone                   String?
+  onboardingComplete      Boolean          @default(false)
+  onboardingStatus        OnboardingStatus @default(pending)
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   projects  Project[]

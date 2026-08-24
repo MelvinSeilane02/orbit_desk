@@ -4,17 +4,27 @@ import Link from "next/link";
 import { useParams, notFound } from "next/navigation";
 import { useOfflineWorkspace } from "@/lib/offline/WorkspaceProvider";
 import { useClientDetail } from "@/lib/offline/reads";
-import { addClientNote, updateClient } from "@/lib/offline/writes/clients";
-import { formatMoney, formatDateShort, formatRelative } from "@/lib/format";
+import { addClientNote, updateClient, rejectClient, restoreClient } from "@/lib/offline/writes/clients";
+import { formatMoney, formatDateShort, formatRelative, formatContactName } from "@/lib/format";
 import { onboardingTone, stageTone, StatusTag } from "@/components/ui/StatusTag";
 import { EditClientModal } from "@/components/clients/ClientModals";
+import { SubmitButton } from "@/components/loading/SubmitButton";
+import { DocumentStackAlignment } from "@/components/loading/DocumentStackAlignment";
+import { useDelayedPending } from "@/lib/loading/useDelayedPending";
 
 export function OfflineClientDetailPage() {
   const params = useParams<{ id: string }>();
   const { workspace } = useOfflineWorkspace();
   const detail = useClientDetail(workspace.id, params.id);
+  const showLoading = useDelayedPending(detail === undefined);
 
-  if (detail === undefined) return null;
+  if (detail === undefined) {
+    return showLoading ? (
+      <div className="flex min-h-0 flex-1 flex-col">
+        <DocumentStackAlignment />
+      </div>
+    ) : null;
+  }
   if (detail === null) notFound();
 
   const { client, projects, timeline, bookedTotal, outstandingTotal } = detail;
@@ -52,6 +62,17 @@ export function OfflineClientDetailPage() {
           <Link href={`/projects?new=1&clientId=${client.id}`} className="od-btn od-btn-p">
             New project
           </Link>
+          {client.onboardingStatus === "rejected" ? (
+            <form action={(fd) => restoreClient(workspace.id, fd)}>
+              <input type="hidden" name="clientId" value={client.id} />
+              <SubmitButton className="od-btn od-btn-s">Restore client</SubmitButton>
+            </form>
+          ) : (
+            <form action={(fd) => rejectClient(workspace.id, fd)}>
+              <input type="hidden" name="clientId" value={client.id} />
+              <SubmitButton className="od-btn od-btn-danger">Reject client</SubmitButton>
+            </form>
+          )}
         </div>
       </div>
 
@@ -102,9 +123,7 @@ export function OfflineClientDetailPage() {
                 placeholder="Add a note about this client"
               />
               <div className="mt-2 flex justify-end">
-                <button type="submit" className="od-btn od-btn-s">
-                  Add note
-                </button>
+                <SubmitButton className="od-btn od-btn-s">Add note</SubmitButton>
               </div>
             </form>
             <div>
@@ -125,7 +144,7 @@ export function OfflineClientDetailPage() {
 
         <div className="flex w-full flex-none flex-col gap-[22px] p-[22px] md:w-[330px] md:p-6" style={{ borderTop: "1px solid var(--od-rule-2)", background: "var(--od-surface)" }}>
           <FactsBlock title="Contact">
-            <FactRow label="Primary contact" value={client.primaryContact || "—"} emphasize />
+            <FactRow label="Primary contact" value={formatContactName(client.primaryContactFirstName, client.primaryContactSurname) || "—"} emphasize />
             <FactRow label="Email" value={client.email || "—"} brass={Boolean(client.email)} />
             <FactRow label="Phone" value={client.phone || "—"} />
           </FactsBlock>
@@ -157,7 +176,8 @@ export function OfflineClientDetailPage() {
         client={{
           id: client.id,
           companyName: client.companyName,
-          primaryContact: client.primaryContact,
+          primaryContactFirstName: client.primaryContactFirstName,
+          primaryContactSurname: client.primaryContactSurname,
           email: client.email,
           phone: client.phone,
           onboardingStatus: client.onboardingStatus,

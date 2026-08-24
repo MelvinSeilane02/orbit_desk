@@ -30,3 +30,9 @@ export function formatRelative(date: Date | string | number) {
 export function daysAgo(date: Date | string | number) {
   return differenceInCalendarDays(new Date(), new Date(date));
 }
+
+/** No "—" fallback baked in, so this stays usable for search filtering too —
+ * callers add `|| "—"` at display sites. */
+export function formatContactName(firstName: string | null, surname: string | null) {
+  return [firstName, surname].filter(Boolean).join(" ").trim();
+}

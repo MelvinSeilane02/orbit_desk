@@ -28,6 +28,10 @@
   --od-th: #8d8278;
   --od-neutral-pos: #93a58a;
   --od-canvas: #0d0b0a;
+
+  --od-dur: 450ms;
+  --od-dur-fast: 320ms;
+  --od-ease: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * {
@@ -164,6 +168,15 @@ a:hover {
   align-items: center;
   gap: 7px;
   cursor: default;
+}
+.od-acct-chevron {
+  transition: transform 0.18s ease;
+}
+details:not([open]) > summary:hover .od-acct-chevron {
+  transform: translateY(1.5px);
+}
+details[open] > summary .od-acct-chevron {
+  transform: rotate(180deg);
 }
 .od-kbd {
   font-size: 11.5px;
@@ -645,4 +658,118 @@ textarea.od-input {
 ::-webkit-scrollbar-thumb {
   background: var(--od-oak);
   border: 2px solid var(--od-bg);
+}
+
+/* ================================================================
+   Loading animations — "Orbit Desk organising your workspace", not
+   software waiting. No spinners. Unlayered like the rest of this
+   file (see the .od-nav-app comment above) so these safely beat any
+   Tailwind utility applied to the same element, but that also means
+   never mixing a Tailwind animate- or transition- utility onto an
+   element that already carries one of these classes.
+   ================================================================ */
+@keyframes od-grain-drift {
+  from { background-position: 0 0; }
+  to { background-position: -48px 0; }
+}
+@keyframes od-sweep-travel {
+  from { transform: translateX(-120%); }
+  to { transform: translateX(220%); }
+}
+@keyframes od-loading-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes od-card-settle {
+  from { opacity: 0; transform: translate(var(--od-card-x, 0), var(--od-card-y, 10px)) rotate(var(--od-card-r, 0deg)) scale(0.96); }
+  to { opacity: 1; transform: translate(0, 0) rotate(0deg) scale(1); }
+}
+@keyframes od-folder-settle {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.od-loading-oak-sweep {
+  position: relative;
+  overflow: hidden;
+  height: 3px;
+  background: var(--od-oak);
+  background-image: repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.18) 0 1px, transparent 1px 12px);
+  animation: od-grain-drift 6s linear infinite;
+}
+.od-loading-oak-sweep::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, var(--od-brass), transparent);
+  animation: od-sweep-travel var(--od-dur) var(--od-ease) infinite;
+}
+.od-loading-oak-sweep--block {
+  height: 3px;
+  width: min(220px, 60%);
+  margin: auto;
+  animation: od-grain-drift 6s linear infinite, od-loading-fade-in var(--od-dur-fast) var(--od-ease);
+}
+.od-loading-oak-sweep--inline {
+  height: 2px;
+  width: 34px;
+  display: inline-block;
+  animation: od-grain-drift 4s linear infinite;
+}
+.od-loading-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  animation: od-loading-fade-in var(--od-dur-fast) var(--od-ease);
+}
+
+.od-loading-doc-stack {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  animation: od-loading-fade-in var(--od-dur-fast) var(--od-ease);
+}
+.od-loading-doc-folder {
+  position: absolute;
+  width: 96px;
+  height: 68px;
+  background: var(--od-oak);
+  border: 1px solid var(--od-oak-lt);
+  opacity: 0;
+  animation: od-folder-settle var(--od-dur) var(--od-ease) forwards;
+  animation-delay: calc(var(--od-dur) * 0.5);
+}
+.od-loading-doc-card {
+  position: absolute;
+  width: 58px;
+  height: 40px;
+  background: var(--od-text);
+  border: 1px solid var(--od-rule-2);
+  opacity: 0;
+  animation: od-card-settle var(--od-dur) var(--od-ease) forwards;
+}
+.od-loading-doc-card:nth-child(1) { --od-card-x: -34px; --od-card-y: -14px; --od-card-r: -2deg; animation-delay: 0ms; }
+.od-loading-doc-card:nth-child(2) { --od-card-x: -14px; --od-card-y: 6px; --od-card-r: 1.5deg; animation-delay: 70ms; background: var(--od-th); }
+.od-loading-doc-card:nth-child(3) { --od-card-x: 10px; --od-card-y: -8px; --od-card-r: -1deg; animation-delay: 140ms; }
+.od-loading-doc-card:nth-child(4) { --od-card-x: 30px; --od-card-y: 8px; --od-card-r: 2deg; animation-delay: 210ms; background: var(--od-th); }
+
+@media (prefers-reduced-motion: reduce) {
+  .od-loading-oak-sweep,
+  .od-loading-oak-sweep--block,
+  .od-loading-oak-sweep--inline {
+    animation: od-loading-fade-in var(--od-dur-fast) ease;
+  }
+  .od-loading-oak-sweep::after {
+    animation: none;
+    display: none;
+  }
+  .od-loading-doc-folder,
+  .od-loading-doc-card {
+    animation: od-loading-fade-in var(--od-dur-fast) ease forwards;
+    transform: none !important;
+  }
 }
