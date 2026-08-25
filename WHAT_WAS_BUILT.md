@@ -414,29 +414,52 @@ given the size of the full spec — with Merge and Checkpoint deferred.
   verification exercises — headless Chromium auto-resolves the picker
   APIs to an unobservable location). No persistent folder-handle caching
   yet — every backup/restore re-prompts.
-- **`src/components/backup/BackupModal.tsx`** / **`RestoreModal.tsx`**:
-  `QueryModal`-based, matching `CollaboratorModal`'s existing shape.
-  Restore has a pick → preview (record counts, export date, an explicit
-  red warning that this replaces everything) → confirm → progress
-  (reusing `OakGrainSweep` from the loading-animation system, not a
-  spinner) → done flow. Entry points are two new links in
-  `AccountMenu.tsx`'s offline dropdown, next to the workspace switcher —
-  there's no settings page anywhere in the app, so this was the only
-  sensible existing surface.
+- **`src/components/backup/RestoreModal.tsx`**: `QueryModal`-based,
+  matching `CollaboratorModal`'s existing shape. Pick → preview (record
+  counts, export date, an explicit red warning that this replaces
+  everything) → confirm → progress (reusing `OakGrainSweep` from the
+  loading-animation system, not a spinner) → done flow. Entry point is a
+  "Restore workspace" link in `AccountMenu.tsx`'s offline dropdown, next
+  to the workspace switcher — there's no settings page anywhere in the
+  app, so this was the only sensible existing surface.
+- **Backup, revised**: there is no standalone "Backup workspace" menu
+  entry anymore — it was folded into sign-out instead, on the reasoning
+  that the moment backing up actually matters is the moment the data is
+  about to become unreachable (sign-out drops back to the sign-in
+  screen), not some separate, easy-to-forget menu action. Clicking
+  "Sign out" in `AccountMenu.tsx`'s offline dropdown now opens
+  **`src/components/backup/SignOutConfirmModal.tsx`**, which offers two
+  explicit choices — "Sign out" (immediate) or "Backup and sign out"
+  (runs the same `exportWorkspaceBackup`/`downloadBackupFile` export,
+  shows the inline `OakGrainSweep` loading animation on that button and
+  disables both buttons while it runs, then calls `signOut()`
+  automatically once the download completes). Closing the overlay (✕,
+  backdrop, Escape) cancels either path — nothing happens. The offline
+  sign-in/sign-up screen (`OfflineAuthScreen.tsx`) also now carries a
+  brief reminder to back up regularly, on both the returning-user and
+  new-profile sides.
 
 **Deliberately not built this pass**: Merge mode's tiered conflict
 resolution, Checkpoint restore and its `backupCheckpoints` cursor table,
 and persistent folder-handle caching. Online/Postgres mode is untouched,
-matching the multi-workspace feature's precedent.
+matching the multi-workspace feature's precedent — its sign-out stays a
+plain immediate action, since "backup" isn't a concept that applies to
+Postgres-backed data.
 
 Verified with `tsc --noEmit` (clean), `next build` in both
 `NEXT_PUBLIC_OFFLINE_MODE` states (clean — one online-mode build as
-regression insurance even though no online files changed), and a live
-Playwright round-trip: sign up → backup a seeded demo workspace (12
-clients, 15 projects, 11 payments, 50 timeline events) → create a second,
-empty workspace → restore the backup into it → confirm all 12 clients
-land correctly with onboarding recomputed and zero console errors
-throughout.
+regression insurance even though no online files changed), and two live
+Playwright passes: (1) the original export/restore round-trip — sign up →
+backup a seeded demo workspace (12 clients, 15 projects, 11 payments, 50
+timeline events) → create a second, empty workspace → restore the backup
+into it → confirm all 12 clients land correctly with onboarding
+recomputed; (2) the reworked sign-out flow — confirm both auth-screen
+tips render, the dropdown no longer shows a standalone backup link, the
+sign-out overlay opens with the right copy, "Backup and sign out"
+produces the same correct export and lands back on the sign-in screen
+once it's done, plain "Sign out" signs out immediately with no backup,
+and Escape cancels the overlay with the user still signed in. Zero
+console errors throughout both passes.
 
 ## Known limitations / deferred
 

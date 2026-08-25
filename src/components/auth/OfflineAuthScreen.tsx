@@ -28,6 +28,10 @@ export function OfflineAuthScreen({ onSignedIn }: { onSignedIn: () => void }) {
             <p className="od-muted text-[12.5px] leading-[1.5]">
               Offline mode — this device only. Enter your username, no password needed.
             </p>
+            <p className="text-[11.5px] leading-[1.5]" style={{ color: "var(--od-brass)" }}>
+              Tip: back up your workspace from the account menu regularly — if this
+              browser&apos;s storage is ever cleared, anything not backed up is gone for good.
+            </p>
           </div>
           <SignInForm onSignedIn={onSignedIn} />
         </div>
@@ -43,7 +47,8 @@ export function OfflineAuthScreen({ onSignedIn }: { onSignedIn: () => void }) {
             <h3>Simple enough to use every day.</h3>
             <p className="od-muted text-[13.5px] leading-[1.6]">
               Set up a local profile — your data stays in this browser, nothing leaves
-              your device.
+              your device. Back it up from the account menu once you&apos;re in, so a
+              cleared browser or a new device doesn&apos;t lose it.
             </p>
           </div>
           <hr className="od-rule" />

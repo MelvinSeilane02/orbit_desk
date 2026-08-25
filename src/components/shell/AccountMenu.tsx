@@ -78,13 +78,14 @@ function OnlineAccountMenu({ showArchiveLink }: { showArchiveLink: boolean }) {
   );
 }
 
-/** No server session to sign out of — just clears the local sessionStorage
- * pointer to the current local user, which drops back to the sign-in
- * screen (see WorkspaceProvider). Also carries the workspace switcher,
- * since this is "the account/nav area dropdown" — no separate popover was
- * introduced for it. */
+/** No server session to sign out of — "Sign out" opens SignOutConfirmModal,
+ * which offers a backup-first option before clearing the local
+ * sessionStorage pointer to the current local user (drops back to the
+ * sign-in screen, see WorkspaceProvider). Also carries the workspace
+ * switcher, since this is "the account/nav area dropdown" — no separate
+ * popover was introduced for it. */
 function OfflineAccountMenu({ showArchiveLink }: { showArchiveLink: boolean }) {
-  const { user, workspace, workspaces, signOut } = useOfflineWorkspace();
+  const { user, workspace, workspaces } = useOfflineWorkspace();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -163,13 +164,6 @@ function OfflineAccountMenu({ showArchiveLink }: { showArchiveLink: boolean }) {
           + New workspace
         </Link>
         <Link
-          href={queryHref("backup", "1")}
-          className="od-tab"
-          style={{ padding: "8px 14px" }}
-        >
-          Backup workspace
-        </Link>
-        <Link
           href={queryHref("restore", "1")}
           className="od-tab"
           style={{ padding: "8px 14px", borderBottom: "1px solid var(--od-rule)" }}
@@ -182,14 +176,13 @@ function OfflineAccountMenu({ showArchiveLink }: { showArchiveLink: boolean }) {
             Archive
           </Link>
         )}
-        <button
-          type="button"
-          onClick={signOut}
-          className="od-tab w-full text-left"
+        <Link
+          href={queryHref("signout", "1")}
+          className="od-tab"
           style={{ padding: "10px 14px", color: "var(--od-red)" }}
         >
           Sign out
-        </button>
+        </Link>
       </div>
     </details>
   );
