@@ -8,6 +8,7 @@ import { archiveProject, createProject } from "@/lib/offline/writes/projects";
 import { formatMoney, formatRelative } from "@/lib/format";
 import { stageTone, StatusTag } from "@/components/ui/StatusTag";
 import { AttentionRow } from "@/components/projects/AttentionRow";
+import { TruncatedTitle } from "@/components/ui/TruncatedTitle";
 import { NewProjectModal } from "@/components/projects/ProjectModals";
 
 const TABS = [
@@ -186,12 +187,12 @@ function ListView({
           return (
             <Link key={p.id} href={`/projects/${p.id}`} className={flagged ? "od-drawer od-drawer-flag" : "od-drawer"} style={{ cursor: "pointer" }}>
               <span className="od-pull" />
-              <span className="font-extrabold text-[13.5px]" style={{ flex: 1, minWidth: 0 }}>{p.name}</span>
+              <TruncatedTitle text={p.name} className="font-extrabold text-[13.5px]" style={{ flex: 1, minWidth: 0 }} />
               <span className="od-muted hidden text-[13px] md:inline" style={{ width: 180 }}>{p.client.companyName}</span>
-              <span style={{ width: 120 }}>
+              <span className="md:w-[120px]" style={{ flex: "none" }}>
                 <StatusTag tone={tone} label={label} />
               </span>
-              <span className="od-num text-right text-[13.5px]" style={{ width: 100 }}>
+              <span className="od-num text-right text-[13.5px] md:w-[100px]" style={{ flex: "none" }}>
                 {formatMoney(p.fixedPrice, currency)}
               </span>
               <span className="od-muted hidden text-right text-[11.5px] md:inline" style={{ width: 92 }}>
@@ -236,11 +237,11 @@ function ByClientView({ rows, currency }: { rows: ProjectListRow[]; currency: st
                 return (
                   <Link key={p.id} href={`/projects/${p.id}`} className="od-drawer" style={{ padding: "11px 14px", cursor: "pointer" }}>
                     <span className="od-pull" />
-                    <span className="text-[13.5px]" style={{ flex: 1, minWidth: 0 }}>{p.name}</span>
-                    <span style={{ width: 120 }}>
+                    <TruncatedTitle text={p.name} className="text-[13.5px]" style={{ flex: 1, minWidth: 0 }} />
+                    <span className="md:w-[120px]" style={{ flex: "none" }}>
                       <StatusTag tone={tone} label={label} />
                     </span>
-                    <span className="od-num text-right text-[13.5px]" style={{ width: 100 }}>
+                    <span className="od-num text-right text-[13.5px] md:w-[100px]" style={{ flex: "none" }}>
                       {formatMoney(p.fixedPrice, currency)}
                     </span>
                     <span className="od-muted hidden text-right text-[11.5px] md:inline" style={{ width: 92 }}>

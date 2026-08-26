@@ -8,6 +8,7 @@ import { createClient } from "@/lib/offline/writes/clients";
 import { formatRelative, formatContactName } from "@/lib/format";
 import { onboardingTone, StatusTag } from "@/components/ui/StatusTag";
 import { NewClientModal } from "@/components/clients/ClientModals";
+import { TruncatedTitle } from "@/components/ui/TruncatedTitle";
 
 const TABS = [
   { key: "all", label: "All" },
@@ -203,12 +204,10 @@ function LastContactView({ clients }: { clients: ClientListRow[] }) {
             <Link key={c.id} href={`/clients/${c.id}`} className="od-drawer" style={{ cursor: "pointer" }}>
               <span className="od-pull" />
               <span style={{ width: 24, height: 24, flex: "none", background: "var(--od-oak)" }} />
-              <span className="font-extrabold text-[13.5px]" style={{ flex: 1, minWidth: 0 }}>
-                {c.companyName}
-              </span>
-              <span className="od-muted text-[12.5px]" style={{ width: 170 }}>{formatContactName(c.primaryContactFirstName, c.primaryContactSurname) || "—"}</span>
-              <span className="od-muted text-[11.5px]" style={{ width: 180 }}>{formatRelative(c.lastContactAt)}</span>
-              <span className="od-muted text-[11.5px]" style={{ width: 160 }}>{c.projectCount} project{c.projectCount === 1 ? "" : "s"}</span>
+              <TruncatedTitle text={c.companyName} className="font-extrabold text-[13.5px]" style={{ flex: 1, minWidth: 0 }} />
+              <span className="od-muted hidden text-[12.5px] md:inline" style={{ width: 170 }}>{formatContactName(c.primaryContactFirstName, c.primaryContactSurname) || "—"}</span>
+              <span className="od-muted hidden text-[11.5px] md:inline" style={{ width: 180 }}>{formatRelative(c.lastContactAt)}</span>
+              <span className="od-muted hidden text-[11.5px] md:inline" style={{ width: 160 }}>{c.projectCount} project{c.projectCount === 1 ? "" : "s"}</span>
             </Link>
           ))}
         </div>
@@ -223,7 +222,7 @@ function ClientRow({ client: c }: { client: ClientListRow }) {
       <span className="od-pull" />
       <div className="flex min-w-0 items-center gap-[11px]" style={{ flex: 1.2 }}>
         <span style={{ width: 26, height: 26, flex: "none", background: "var(--od-oak)" }} />
-        <span className="font-extrabold text-[13.5px]">{c.companyName}</span>
+        <TruncatedTitle text={c.companyName} className="font-extrabold text-[13.5px]" style={{ flex: 1, minWidth: 0 }} />
       </div>
       <div className="hidden min-w-0 flex-col md:flex" style={{ flex: 1 }}>
         <span className="text-[12.5px]">{formatContactName(c.primaryContactFirstName, c.primaryContactSurname) || "—"}</span>
@@ -232,7 +231,7 @@ function ClientRow({ client: c }: { client: ClientListRow }) {
       <span className="od-muted hidden text-[11.5px] md:inline" style={{ width: 160 }}>
         {c.projectCount} project{c.projectCount === 1 ? "" : "s"}
       </span>
-      <span style={{ width: 130 }}>
+      <span className="md:w-[130px]" style={{ flex: "none" }}>
         <StatusTag tone={onboardingTone(c.onboardingStatus)} label={capitalize(c.onboardingStatus)} />
       </span>
       <span className="od-muted hidden text-right text-[11.5px] md:inline" style={{ width: 130 }}>

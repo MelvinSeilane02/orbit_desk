@@ -91,6 +91,45 @@ a:hover {
 .od-muted {
   color: var(--od-muted);
 }
+.od-truncate {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.od-title-hint-btn {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--od-rule-2);
+  background: none;
+  color: var(--od-muted);
+  font-size: 9.5px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.od-title-hint-btn:hover,
+.od-title-hint-btn:focus-visible {
+  color: var(--od-text);
+  border-color: var(--od-brass);
+}
+.od-title-hint-pop {
+  position: fixed;
+  z-index: 30;
+  max-width: min(260px, calc(100vw - 24px));
+  background: var(--od-surface);
+  border: 1px solid var(--od-rule-2);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+  padding: 7px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--od-text);
+}
 
 /* Focus ring — spec §9: 2px rustic outline, 2px offset, never a browser default */
 :focus-visible {
