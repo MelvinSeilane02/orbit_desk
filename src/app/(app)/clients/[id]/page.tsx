@@ -107,7 +107,7 @@ export default async function ClientDetailPage({
                       <TruncatedTitle text={p.name} className="font-extrabold text-[13.5px]" />
                       <span className="od-muted overflow-hidden text-ellipsis whitespace-nowrap text-[11px]">{formatRelative(p.updatedAt)}</span>
                     </div>
-                    <span style={{ width: 120, textAlign: "center" }}>
+                    <span style={{ width: 90, textAlign: "center" }}>
                       <StatusTag tone={tone} label={label} />
                     </span>
                     <span className="od-num text-right text-[13.5px]" style={{ width: 96 }}>
