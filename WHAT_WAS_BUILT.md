@@ -473,7 +473,8 @@ desktop, and — since touch devices have no hover — measures
 "i" button that opens a `createPortal`-rendered popover with the full text
 on tap. New `.od-truncate`/`.od-title-hint-*` rules in `globals.css`.
 Swapped in for the plain title spans in both projects list views
-(`ListView`, `ByClientView`) and the clients list, online and offline.
+(`ListView`, `ByClientView`), the clients list, and the project rows on the
+client detail page's "Projects" panel — online and offline throughout.
 
 ## Multi-currency projects + `Money` value object (offline mode)
 

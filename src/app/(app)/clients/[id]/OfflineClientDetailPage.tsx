@@ -8,6 +8,7 @@ import { addClientNote, updateClient, rejectClient, restoreClient } from "@/lib/
 import { formatDateShort, formatRelative, formatContactName } from "@/lib/format";
 import { onboardingTone, stageTone, StatusTag } from "@/components/ui/StatusTag";
 import { EditClientModal } from "@/components/clients/ClientModals";
+import { TruncatedTitle } from "@/components/ui/TruncatedTitle";
 import { SubmitButton } from "@/components/loading/SubmitButton";
 import { DocumentStackAlignment } from "@/components/loading/DocumentStackAlignment";
 import { useDelayedPending } from "@/lib/loading/useDelayedPending";
@@ -95,7 +96,7 @@ export function OfflineClientDetailPage() {
                   <Link key={p.id} href={`/projects/${p.id}`} className="od-drawer" style={{ padding: "12px 15px" }}>
                     <span className="od-pull" />
                     <div className="flex min-w-0 flex-1 flex-col gap-[2px]">
-                      <span className="font-extrabold text-[13.5px]">{p.name}</span>
+                      <TruncatedTitle text={p.name} className="font-extrabold text-[13.5px]" />
                       <span className="od-muted text-[11px]">{formatRelative(p.updatedAt)}</span>
                     </div>
                     <span style={{ width: 120 }}>
