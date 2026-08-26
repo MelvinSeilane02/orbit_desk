@@ -97,7 +97,7 @@ export function OfflineClientDetailPage() {
                     <span className="od-pull" />
                     <div className="flex min-w-0 flex-1 flex-col gap-[2px]">
                       <TruncatedTitle text={p.name} className="font-extrabold text-[13.5px]" />
-                      <span className="od-muted text-[11px]">{formatRelative(p.updatedAt)}</span>
+                      <span className="od-muted overflow-hidden text-ellipsis whitespace-nowrap text-[11px]">{formatRelative(p.updatedAt)}</span>
                     </div>
                     <span style={{ width: 120 }}>
                       <StatusTag tone={tone} label={label} />
