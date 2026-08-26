@@ -2,8 +2,7 @@ import { z } from "zod";
 import { getDb } from "@/lib/offline/db";
 import { newId } from "@/lib/offline/ids";
 import { logEvent, logProjectEventMirrored } from "@/lib/offline/timeline";
-import { dollarsToCents } from "@/lib/offline/money";
-import { formatMoney } from "@/lib/format";
+import { Money } from "@/lib/money";
 import type { OfflineFormState } from "@/lib/offline/writes/auth";
 import type { ProjectStage } from "@/lib/offline/db";
 
@@ -22,6 +21,28 @@ const projectSchema = z.object({
   fixedPrice: z.coerce.number().min(0, "Enter a price of 0 or more"),
 });
 
+/** A project can be priced in a currency other than the workspace default —
+ * when it is, the user enters a conversion rate by hand (1 unit of the
+ * project's currency = `conversionRate` units of the workspace default),
+ * which is what totals that span multiple projects convert through instead
+ * of calling a live FX API. Defaults to the workspace currency (rate 1)
+ * when no currency was chosen. */
+function resolveProjectCurrency(
+  formData: FormData,
+  workspaceCurrency: string
+): { currency: string; conversionRate: number } | { error: string } {
+  const currencyRaw = formData.get("currency");
+  const currency = typeof currencyRaw === "string" && currencyRaw.trim() ? currencyRaw.trim() : workspaceCurrency;
+
+  if (currency === workspaceCurrency) return { currency, conversionRate: 1 };
+
+  const rate = Number(formData.get("conversionRate"));
+  if (!Number.isFinite(rate) || rate <= 0) {
+    return { error: `Enter a conversion rate — 1 ${currency} = ? ${workspaceCurrency}.` };
+  }
+  return { currency, conversionRate: rate };
+}
+
 export async function createProject(
   workspaceId: string,
   _prev: OfflineFormState,
@@ -37,8 +58,14 @@ export async function createProject(
   }
 
   const db = getDb();
-  const client = await db.clients.get(parsed.data.clientId);
+  const [client, workspace] = await Promise.all([
+    db.clients.get(parsed.data.clientId),
+    db.workspaces.get(workspaceId),
+  ]);
   if (!client || client.workspaceId !== workspaceId) return { error: "Choose a valid client." };
+
+  const currencyResolution = resolveProjectCurrency(formData, workspace?.currency ?? "USD");
+  if ("error" in currencyResolution) return { error: currencyResolution.error };
 
   // Stage is structurally limited to pending/active on create — there is no
   // way to create a project already `completed`, mirroring the Postgres
@@ -52,7 +79,9 @@ export async function createProject(
     workspaceId,
     clientId: client.id,
     name: parsed.data.name,
-    fixedPriceCents: dollarsToCents(parsed.data.fixedPrice),
+    fixedPriceCents: Money.fromDollars(parsed.data.fixedPrice, currencyResolution.currency).cents,
+    currency: currencyResolution.currency,
+    conversionRate: currencyResolution.conversionRate,
     stage,
     startedAt: stage === "active" ? now : null,
     builtAt: null,
@@ -97,9 +126,15 @@ export async function updateProject(
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the project details." };
 
+  const workspace = await db.workspaces.get(workspaceId);
+  const currencyResolution = resolveProjectCurrency(formData, workspace?.currency ?? "USD");
+  if ("error" in currencyResolution) return { error: currencyResolution.error };
+
   await db.projects.update(projectId, {
     name: parsed.data.name,
-    fixedPriceCents: dollarsToCents(parsed.data.fixedPrice),
+    fixedPriceCents: Money.fromDollars(parsed.data.fixedPrice, currencyResolution.currency).cents,
+    currency: currencyResolution.currency,
+    conversionRate: currencyResolution.conversionRate,
     updatedAt: Date.now(),
   });
 
@@ -270,7 +305,6 @@ const paymentSchema = z.object({
 
 export async function recordPayment(
   workspaceId: string,
-  currency: string,
   _prev: OfflineFormState,
   formData: FormData
 ): Promise<OfflineFormState> {
@@ -288,10 +322,14 @@ export async function recordPayment(
     return { error: parsed.error.issues[0]?.message ?? "Check the payment details." };
   }
 
+  // Payments are recorded in the project's own currency, not necessarily
+  // the workspace default — see resolveProjectCurrency above.
+  const currency = project.currency ?? (await db.workspaces.get(workspaceId))?.currency ?? "USD";
+  const amount = Money.fromDollars(parsed.data.amount, currency);
   await db.payments.add({
     id: newId(),
     projectId,
-    amountCents: dollarsToCents(parsed.data.amount),
+    amountCents: amount.cents,
     date: parsed.data.date.getTime(),
     note: parsed.data.note || null,
   });
@@ -301,7 +339,7 @@ export async function recordPayment(
     projectId,
     clientId: project.clientId,
     projectName: project.name,
-    what: `Payment recorded — ${formatMoney(parsed.data.amount, currency)}`,
+    what: `Payment recorded — ${amount.format()}`,
   });
 
   return { redirectTo: `/projects/${projectId}` };

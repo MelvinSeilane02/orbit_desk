@@ -5,7 +5,7 @@ import { useParams, notFound } from "next/navigation";
 import { useOfflineWorkspace } from "@/lib/offline/WorkspaceProvider";
 import { useClientDetail } from "@/lib/offline/reads";
 import { addClientNote, updateClient, rejectClient, restoreClient } from "@/lib/offline/writes/clients";
-import { formatMoney, formatDateShort, formatRelative, formatContactName } from "@/lib/format";
+import { formatDateShort, formatRelative, formatContactName } from "@/lib/format";
 import { onboardingTone, stageTone, StatusTag } from "@/components/ui/StatusTag";
 import { EditClientModal } from "@/components/clients/ClientModals";
 import { SubmitButton } from "@/components/loading/SubmitButton";
@@ -102,7 +102,7 @@ export function OfflineClientDetailPage() {
                       <StatusTag tone={tone} label={label} />
                     </span>
                     <span className="od-num text-right text-[13.5px]" style={{ width: 96 }}>
-                      {formatMoney(p.fixedPrice, workspace.currency)}
+                      {p.fixedPrice.format()}
                     </span>
                   </Link>
                 );
@@ -151,8 +151,8 @@ export function OfflineClientDetailPage() {
 
           <FactsBlock title="Summary">
             <div className="flex flex-col gap-[9px]">
-              <MoneyRow label="Booked" value={formatMoney(bookedTotal, workspace.currency)} />
-              <MoneyRow label="Outstanding" value={formatMoney(outstandingTotal, workspace.currency)} color="var(--od-yellow)" />
+              <MoneyRow label="Booked" value={bookedTotal.format()} />
+              <MoneyRow label="Outstanding" value={outstandingTotal.format()} color="var(--od-yellow)" />
               <MoneyRow label="Last contact" value={formatRelative(client.updatedAt)} plain />
             </div>
             <span style={{ fontSize: 10.5, lineHeight: 1.5, color: "#6d635b" }}>

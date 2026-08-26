@@ -3,14 +3,7 @@
 import { useActionState, useRef, useState } from "react";
 import { createWorkspaceAction, type FormState } from "@/lib/actions/workspace";
 import { SubmitButton } from "@/components/loading/SubmitButton";
-
-const CURRENCIES = [
-  { code: "USD", label: "USD $ — US Dollar" },
-  { code: "GBP", label: "GBP £ — British Pound" },
-  { code: "EUR", label: "EUR € — Euro" },
-  { code: "CAD", label: "CAD $ — Canadian Dollar" },
-  { code: "AUD", label: "AUD $ — Australian Dollar" },
-];
+import { CURRENCIES } from "@/lib/currencies";
 
 const TIMEZONES = [
   "America/New_York",

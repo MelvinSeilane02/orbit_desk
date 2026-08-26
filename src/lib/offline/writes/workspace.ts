@@ -35,3 +35,11 @@ export async function createWorkspace(
 export async function switchWorkspace(userId: string, workspaceId: string): Promise<void> {
   await getDb().users.update(userId, { lastActiveWorkspaceId: workspaceId });
 }
+
+/** Plain function, not a form action — called directly from the account
+ * menu's currency <select>. Only changes which currency new projects
+ * default to and which currency multi-project totals are converted into;
+ * existing projects keep the currency/conversionRate they were given. */
+export async function updateWorkspaceCurrency(workspaceId: string, currency: string): Promise<void> {
+  await getDb().workspaces.update(workspaceId, { currency, updatedAt: Date.now() });
+}

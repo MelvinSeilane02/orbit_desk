@@ -6,7 +6,8 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { signOutAction } from "@/lib/actions/auth";
 import { isOfflineMode } from "@/lib/offline/mode";
 import { useOfflineWorkspace } from "@/lib/offline/WorkspaceProvider";
-import { switchWorkspace } from "@/lib/offline/writes/workspace";
+import { switchWorkspace, updateWorkspaceCurrency } from "@/lib/offline/writes/workspace";
+import { CURRENCIES } from "@/lib/currencies";
 import { SubmitButton } from "@/components/loading/SubmitButton";
 import { OakGrainSweep } from "@/components/loading/OakGrainSweep";
 import { useDelayedPending } from "@/lib/loading/useDelayedPending";
@@ -93,6 +94,7 @@ function OfflineAccountMenu({ showArchiveLink }: { showArchiveLink: boolean }) {
   useCloseOnClickAway(ref);
   const [switching, startSwitch] = useTransition();
   const showSwitchingSweep = useDelayedPending(switching);
+  const [changingCurrency, startCurrencyChange] = useTransition();
 
   function queryHref(param: string, value: string) {
     const next = new URLSearchParams(searchParams.toString());
@@ -105,6 +107,13 @@ function OfflineAccountMenu({ showArchiveLink }: { showArchiveLink: boolean }) {
     startSwitch(async () => {
       await switchWorkspace(user.id, workspaceId);
       router.push("/overview");
+    });
+  }
+
+  function onCurrencyChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const currency = e.target.value;
+    startCurrencyChange(async () => {
+      await updateWorkspaceCurrency(workspace.id, currency);
     });
   }
 
@@ -170,6 +179,26 @@ function OfflineAccountMenu({ showArchiveLink }: { showArchiveLink: boolean }) {
         >
           Restore workspace
         </Link>
+
+        <span className="od-muted" style={{ padding: "8px 14px 2px", fontSize: 10, letterSpacing: "0.04em" }}>
+          DEFAULT CURRENCY
+        </span>
+        <div style={{ padding: "2px 14px 10px", borderBottom: "1px solid var(--od-rule)" }}>
+          <select
+            aria-label="Default currency"
+            value={workspace.currency}
+            onChange={onCurrencyChange}
+            disabled={changingCurrency}
+            className="od-input"
+            style={{ minHeight: 30, padding: "5px 8px", fontSize: 12 }}
+          >
+            {CURRENCIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {showArchiveLink && (
           <Link href="/archive" className="od-tab" style={{ padding: "10px 14px", borderBottom: "1px solid var(--od-rule)" }}>

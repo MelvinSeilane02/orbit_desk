@@ -1,6 +1,6 @@
 import { getDb } from "@/lib/offline/db";
 import { newId } from "@/lib/offline/ids";
-import { dollarsToCents } from "@/lib/offline/money";
+import { Money } from "@/lib/money";
 import { computeOnboardingComplete } from "@/lib/offline/writes/clients";
 import type { OnboardingStatus, ProjectStage, RejectedBy } from "@/lib/offline/db";
 
@@ -12,6 +12,8 @@ const daysAgo = (n: number) => Date.now() - n * DAY;
  * local workspace is created. */
 export async function seedDemoData(workspaceId: string): Promise<void> {
   const db = getDb();
+  const workspace = await db.workspaces.get(workspaceId);
+  const currency = workspace?.currency ?? "USD";
 
   async function makeClient(data: {
     companyName: string;
@@ -88,7 +90,9 @@ export async function seedDemoData(workspaceId: string): Promise<void> {
       workspaceId,
       clientId: data.clientId,
       name: data.name,
-      fixedPriceCents: dollarsToCents(data.fixedPrice),
+      fixedPriceCents: Money.fromDollars(data.fixedPrice, currency).cents,
+      currency,
+      conversionRate: 1,
       stage: insertStage,
       startedAt: data.startedDaysAgo !== undefined ? daysAgo(data.startedDaysAgo) : null,
       builtAt: data.builtDaysAgo !== undefined ? daysAgo(data.builtDaysAgo) : null,
@@ -120,7 +124,7 @@ export async function seedDemoData(workspaceId: string): Promise<void> {
       await db.payments.add({
         id: newId(),
         projectId: id,
-        amountCents: dollarsToCents(p.amount),
+        amountCents: Money.fromDollars(p.amount, currency).cents,
         date: when,
         note: p.note ?? null,
       });

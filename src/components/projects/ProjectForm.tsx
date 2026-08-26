@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { ClientSearchInput } from "@/components/projects/ClientSearchInput";
+import { CURRENCIES } from "@/lib/currencies";
 
 /** Superset of lib/actions/projects' FormState — offline write functions
  * add `redirectTo` since there's no server-side redirect() to rely on. */
@@ -15,6 +16,7 @@ export function ProjectForm({
   guided = false,
   submitLabel = "Create project",
   onRedirect,
+  workspaceCurrency,
 }: {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
   clients: Array<{ id: string; companyName: string }>;
@@ -24,8 +26,13 @@ export function ProjectForm({
   submitLabel?: string;
   /** Offline-only: called when the write function returns `redirectTo`. */
   onRedirect?: (to: string) => void;
+  /** Offline only — when set, shows a currency picker (defaulting to this)
+   * and, once a different currency is chosen, a conversion-rate input.
+   * Omitted online, where projects don't yet carry their own currency. */
+  workspaceCurrency?: string;
 }) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(action, undefined);
+  const [currency, setCurrency] = useState(workspaceCurrency ?? "USD");
 
   useEffect(() => {
     if (state?.redirectTo) onRedirect?.(state.redirectTo);
@@ -65,6 +72,26 @@ export function ProjectForm({
             placeholder="0"
           />
         </div>
+        {workspaceCurrency && (
+          <div className="flex-1">
+            <label className="od-lab" htmlFor="pcurrency">
+              Currency
+            </label>
+            <select
+              id="pcurrency"
+              name="currency"
+              className="od-input"
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+            >
+              {CURRENCIES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.code}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="flex-1">
           <label className="od-lab" htmlFor="pstage">
             Stage
@@ -75,6 +102,27 @@ export function ProjectForm({
           </select>
         </div>
       </div>
+
+      {workspaceCurrency && currency !== workspaceCurrency && (
+        <div>
+          <label className="od-lab" htmlFor="pconversion">
+            Conversion rate — 1 {currency} = ? {workspaceCurrency}
+          </label>
+          <input
+            id="pconversion"
+            name="conversionRate"
+            type="number"
+            min={0}
+            step="0.0001"
+            className="od-input"
+            placeholder="e.g. 1.08"
+            required
+          />
+          <span className="od-muted" style={{ fontSize: 10.5, marginTop: 5, display: "block" }}>
+            Entered by hand — used to convert this project into your default currency in totals.
+          </span>
+        </div>
+      )}
 
       {state?.error && (
         <p className="text-[12px]" style={{ color: "var(--od-red)" }}>

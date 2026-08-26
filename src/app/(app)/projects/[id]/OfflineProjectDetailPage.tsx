@@ -17,7 +17,7 @@ import {
   updateProject,
   recordPayment,
 } from "@/lib/offline/writes/projects";
-import { formatMoney, formatDateShort, formatContactName } from "@/lib/format";
+import { formatDateShort, formatContactName } from "@/lib/format";
 import { StageLadder } from "@/components/ui/StageLadder";
 import { StatusTag, stageTone } from "@/components/ui/StatusTag";
 import { PaymentModal } from "@/components/projects/PaymentModal";
@@ -44,7 +44,7 @@ export function OfflineProjectDetailPage() {
   }
   if (detail === null) notFound();
 
-  const { project, timeline, paidTotal, outstanding } = detail;
+  const { project, timeline, paidTotal, outstanding, outstandingInDefaultCurrency } = detail;
   const flag = attention.find((a) => a.projectId === project.id);
   const { tone, label } = stageTone(project.stage);
 
@@ -131,16 +131,22 @@ export function OfflineProjectDetailPage() {
         </div>
 
         <div className="flex w-full flex-none flex-col gap-[22px] p-[22px] md:w-[330px] md:p-6" style={{ borderTop: "1px solid var(--od-rule-2)", background: "var(--od-surface)" }}>
-          <FactsBlock title="Pricing">
+          <FactsBlock title={project.currency === workspace.currency ? "Pricing" : `Pricing · ${project.currency}`}>
             <div className="flex flex-col gap-[9px]">
-              <MoneyRow label="Fixed price" value={formatMoney(project.fixedPrice, workspace.currency)} />
-              <MoneyRow label={`Paid · ${detail.payments.length} payment${detail.payments.length === 1 ? "" : "s"}`} value={formatMoney(paidTotal, workspace.currency)} />
+              <MoneyRow label="Fixed price" value={project.fixedPrice.format()} />
+              <MoneyRow label={`Paid · ${detail.payments.length} payment${detail.payments.length === 1 ? "" : "s"}`} value={paidTotal.format()} />
               <div className="flex justify-between pt-[9px]" style={{ borderTop: "1px solid var(--od-rule-2)" }}>
                 <span className="text-[13px] font-extrabold">Outstanding</span>
-                <span className="od-num text-[13.5px]" style={{ color: outstanding > 0 ? "var(--od-yellow)" : undefined }}>
-                  {formatMoney(outstanding, workspace.currency)}
+                <span className="od-num text-[13.5px]" style={{ color: outstanding.isPositive() ? "var(--od-yellow)" : undefined }}>
+                  {outstanding.format()}
                 </span>
               </div>
+              {outstandingInDefaultCurrency && (
+                <div className="flex justify-between">
+                  <span />
+                  <span className="od-muted text-[11px]">≈ {outstandingInDefaultCurrency.format()} at your rate</span>
+                </div>
+              )}
             </div>
             <span style={{ fontSize: 10.5, lineHeight: 1.5, color: "#6d635b" }}>
               Invoicing and revenue reporting arrive with Money.
@@ -213,11 +219,11 @@ export function OfflineProjectDetailPage() {
         projectId={project.id}
         projectName={project.name}
         clientName={project.client.companyName}
-        fixedPrice={project.fixedPrice}
-        paidTotal={paidTotal}
-        outstanding={outstanding}
-        currency={workspace.currency}
-        action={(state, fd) => recordPayment(workspace.id, workspace.currency, state, fd)}
+        fixedPrice={project.fixedPrice.toDollars()}
+        paidTotal={paidTotal.toDollars()}
+        outstanding={outstanding.toDollars()}
+        currency={project.currency}
+        action={(state, fd) => recordPayment(workspace.id, state, fd)}
       />
       <MarkBuiltModal
         projectId={project.id}
@@ -230,8 +236,8 @@ export function OfflineProjectDetailPage() {
         projectName={project.name}
         clientName={project.client.companyName}
         contactName={formatContactName(project.client.primaryContactFirstName, project.client.primaryContactSurname)}
-        outstanding={outstanding}
-        currency={workspace.currency}
+        outstanding={outstanding.toDollars()}
+        currency={project.currency}
         action={(state, fd) => transferOwnership(workspace.id, state, fd)}
       />
       <RejectModal
@@ -242,7 +248,14 @@ export function OfflineProjectDetailPage() {
       />
       <CollaboratorModal projectId={project.id} action={(fd) => addCollaborator(workspace.id, fd)} />
       <EditProjectModal
-        project={{ id: project.id, name: project.name, fixedPrice: String(project.fixedPrice) }}
+        project={{
+          id: project.id,
+          name: project.name,
+          fixedPrice: String(project.fixedPrice.toDollars()),
+          currency: project.currency,
+          conversionRate: project.conversionRate,
+        }}
+        workspaceCurrency={workspace.currency}
         action={(state, fd) => updateProject(workspace.id, state, fd)}
       />
     </div>

@@ -56,6 +56,16 @@ export interface ProjectRow {
   clientId: string;
   name: string;
   fixedPriceCents: number;
+  /** ISO code the project is priced in — independent of the workspace's
+   * default currency. Undefined on rows written before this field existed;
+   * readers fall back to the workspace's currency. */
+  currency?: string;
+  /** Manually-entered rate: 1 unit of `currency` = `conversionRate` units of
+   * the workspace's default currency, captured once at entry time instead of
+   * calling a live FX API. 1 when `currency` matches the workspace default.
+   * Not re-derived if the workspace's default currency changes later — see
+   * writes/projects.ts. */
+  conversionRate?: number;
   stage: ProjectStage;
   startedAt: number | null;
   builtAt: number | null;

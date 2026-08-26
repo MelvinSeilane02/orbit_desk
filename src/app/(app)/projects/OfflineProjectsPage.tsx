@@ -5,7 +5,8 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useOfflineWorkspace } from "@/lib/offline/WorkspaceProvider";
 import { useProjectsForList, useAttentionItems, useClientsPicker, type ProjectListRow } from "@/lib/offline/reads";
 import { archiveProject, createProject } from "@/lib/offline/writes/projects";
-import { formatMoney, formatRelative } from "@/lib/format";
+import { sumMoney } from "@/lib/money";
+import { formatRelative } from "@/lib/format";
 import { stageTone, StatusTag } from "@/components/ui/StatusTag";
 import { AttentionRow } from "@/components/projects/AttentionRow";
 import { TruncatedTitle } from "@/components/ui/TruncatedTitle";
@@ -151,22 +152,24 @@ export function OfflineProjectsPage() {
         {view === "by-client" ? (
           <ByClientView rows={rows} currency={workspace.currency} />
         ) : (
-          <ListView rows={rows} currency={workspace.currency} attentionByProject={attentionByProject} />
+          <ListView rows={rows} attentionByProject={attentionByProject} />
         )}
       </div>
 
-      <NewProjectModal clients={clients} action={(state, fd) => createProject(workspace.id, state, fd)} />
+      <NewProjectModal
+        clients={clients}
+        workspaceCurrency={workspace.currency}
+        action={(state, fd) => createProject(workspace.id, state, fd)}
+      />
     </>
   );
 }
 
 function ListView({
   rows,
-  currency,
   attentionByProject,
 }: {
   rows: ProjectListRow[];
-  currency: string;
   attentionByProject: Set<string>;
 }) {
   return (
@@ -193,7 +196,7 @@ function ListView({
                 <StatusTag tone={tone} label={label} />
               </span>
               <span className="od-num text-right text-[13.5px] md:w-[100px]" style={{ flex: "none" }}>
-                {formatMoney(p.fixedPrice, currency)}
+                {p.fixedPrice.format()}
               </span>
               <span className="od-muted hidden text-right text-[11.5px] md:inline" style={{ width: 92 }}>
                 {formatRelative(p.lastActivity)}
@@ -219,13 +222,19 @@ function ByClientView({ rows, currency }: { rows: ProjectListRow[]; currency: st
     <div className="flex min-h-0 flex-col gap-5">
       {list.length === 0 && <p className="od-muted p-4 text-[13px]">No projects match this view yet.</p>}
       {list.map((g) => {
-        const booked = g.items.reduce((s, p) => s + p.fixedPrice, 0);
+        // Items can each be priced in a different currency, so convert to
+        // the workspace default (via each project's own conversion rate)
+        // before summing.
+        const booked = sumMoney(
+          g.items.map((p) => p.fixedPrice.convert(p.conversionRate ?? 1, currency)),
+          currency
+        );
         return (
           <div key={g.clientId} className="flex flex-col gap-[9px]">
             <div className="flex items-center gap-3">
               <span className="od-plate">{g.client}</span>
               <span className="od-muted text-[11.5px]">
-                {g.items.length} project{g.items.length === 1 ? "" : "s"} · {formatMoney(booked, currency)} booked
+                {g.items.length} project{g.items.length === 1 ? "" : "s"} · {booked.format()} booked
               </span>
               <Link href={`/clients/${g.clientId}`} className="text-[11.5px] font-extrabold" style={{ marginLeft: "auto", color: "var(--od-brass)" }}>
                 Open client
@@ -242,7 +251,7 @@ function ByClientView({ rows, currency }: { rows: ProjectListRow[]; currency: st
                       <StatusTag tone={tone} label={label} />
                     </span>
                     <span className="od-num text-right text-[13.5px] md:w-[100px]" style={{ flex: "none" }}>
-                      {formatMoney(p.fixedPrice, currency)}
+                      {p.fixedPrice.format()}
                     </span>
                     <span className="od-muted hidden text-right text-[11.5px] md:inline" style={{ width: 92 }}>
                       {formatRelative(p.lastActivity)}

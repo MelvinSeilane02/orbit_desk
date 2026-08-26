@@ -461,6 +461,81 @@ once it's done, plain "Sign out" signs out immediately with no backup,
 and Escape cancels the overlay with the user still signed in. Zero
 console errors throughout both passes.
 
+## List-row title truncation (`TruncatedTitle`)
+
+Project/client names in list rows (both online and offline `/projects` and
+`/clients`) could overflow or wrap awkwardly on mobile, where secondary
+columns get hidden and the title has to share a flex row with a status tag
+and a price. `src/components/ui/TruncatedTitle.tsx` truncates with an
+ellipsis via CSS, uses the native `title` attribute for hover-to-reveal on
+desktop, and — since touch devices have no hover — measures
+`scrollWidth > clientWidth` on mount/resize to conditionally show a small
+"i" button that opens a `createPortal`-rendered popover with the full text
+on tap. New `.od-truncate`/`.od-title-hint-*` rules in `globals.css`.
+Swapped in for the plain title spans in both projects list views
+(`ListView`, `ByClientView`) and the clients list, online and offline.
+
+## Multi-currency projects + `Money` value object (offline mode)
+
+Each project can now be priced in a currency other than its workspace's
+default, with a hand-entered conversion rate — the offline-mode
+counterpart to the `Money`/`Analytics` "Coming" nav items eventually
+needing real currency handling. **Online/Postgres is untouched**: `Project`
+has no currency column there yet, matching this doc's existing precedent of
+scoping speculative-shaped features to offline mode first (see
+multi-workspace support above).
+
+- **`src/lib/money.ts`**: a `Money` class (amount in integer cents + an ISO
+  currency code, bundled so the two can't drift apart or get passed to the
+  wrong `formatMoney(amount, currency)` slot) with `add`/`subtract`
+  (currency-checked, throws on mismatch), `convert(rate, toCurrency)`, and
+  `format()`. Replaces the old free-floating
+  `dollarsToCents`/`centsToDollars` pair (`src/lib/offline/money.ts`,
+  deleted) everywhere in the offline data layer — `reads.ts`,
+  `writes/projects.ts`, `writes/payments`, and `seed.ts` now pass `Money`
+  objects instead of raw numbers.
+- **`src/lib/currencies.ts`**: the `CURRENCIES` list (USD/GBP/EUR/CAD/AUD,
+  plus new ZAR) hoisted out of `WorkspaceSetupForm` so the same list also
+  drives the new per-project currency picker and the account-menu default-
+  currency selector.
+- **`ProjectRow` gained optional `currency`/`conversionRate`** fields
+  (`src/lib/offline/db.ts`) — optional so rows written before this shipped
+  keep working, falling back to the workspace's currency (rate 1) via
+  `projectCurrency()`/`projectConversionRate()` helpers in `reads.ts`.
+  `resolveProjectCurrency()` in `writes/projects.ts` handles both create and
+  update: picking the workspace default needs no rate, picking anything
+  else requires a rate > 0 or the write is rejected. The rate is a
+  manually-entered number (1 unit of the project's currency = `rate` units
+  of the workspace default), not a live FX lookup — same manual-entry
+  pattern as `Client`'s existing fields, and avoids adding an external API
+  dependency for a V1 feature.
+- **`reads.ts` reworked to return `Money` everywhere** money used to be a
+  plain `number`: `ProjectListRow.fixedPrice/paidTotal/outstanding`,
+  `ProjectDetail.paidTotal/outstanding` (plus a new
+  `outstandingInDefaultCurrency`, populated only when the project's
+  currency differs from the workspace's), and both clients' list/detail
+  `bookedTotal/outstandingTotal`. Payments are recorded in the project's
+  own currency, so per-project totals stay in that currency; any total that
+  combines *multiple* projects (by-client grouping, client list/detail)
+  converts each project through its own `conversionRate` into the
+  workspace default before summing, via the new `fixedPriceInDefaultCurrency()`
+  helper and `sumMoney()`.
+- **UI**: `ProjectForm`/`ProjectModals` gained a currency `<select>` and,
+  once a non-default currency is chosen, a required conversion-rate input
+  — gated behind a new optional `workspaceCurrency` prop so the online
+  forms (which don't pass it, since Postgres has no per-project currency
+  yet) render unchanged. The project detail page's Pricing block shows
+  `Pricing · EUR` in the heading when the project's currency differs from
+  the workspace default, with an "≈ $X at your rate" line under
+  Outstanding. `AccountMenu`'s offline dropdown gained a "Default currency"
+  selector (`updateWorkspaceCurrency()` in `writes/workspace.ts`) — changing
+  it only affects new projects' default and multi-project total
+  conversions; existing projects keep the currency/rate they were given.
+
+`npx tsc --noEmit` is clean on this change. Not yet verified with a live
+Playwright pass — the change is still staged/uncommitted as of this
+update.
+
 ## Known limitations / deferred
 
 - **Money and Analytics** nav items are present but marked "Coming" per
